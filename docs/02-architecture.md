@@ -91,8 +91,9 @@ interface GameDriver {
 ```
 
 - `LocalGameDriver`：內部持有引擎，`send` 直接 reduce；兩位玩家輪流操作同一畫面（畫面上以「請把裝置交給玩家 B」過場提示切換）。
+- `DummyGameDriver`（木人樁練習，Phase 1）：也持有引擎，但 player[1] 是「木人樁」——它永遠不出手（後攻階段自動跳過、對玩家零傷害），HP 依難度設定，玩家把它打到 0 即過關。實作上就是 `LocalGameDriver` 的一個模式旗標（`opponent: 'dummy'`），對手朗讀階段直接注入一筆 `accuracy = 0`（或乾脆跳過），讓一個人也能完整跑計分流程。
 - `RemoteGameDriver`：`send` → Socket.IO；state 由伺服器廣播覆蓋。
-- 之後若要做 vs AI，只需第三個 driver，UI 零改動。
+- 之後若要做 vs AI，只需把木人樁換成會產生對手 accuracy 的第四個模式，UI 零改動。
 
 ---
 
@@ -129,9 +130,32 @@ interface GameState {
     maskedIndices?: number[];            // 遮字道具的結果
   } | null;
   lastResolve: ResolveResult | null;     // 給結算畫面與特效層
+  mode: 'local' | 'dummy' | 'remote';    // dummy＝木人樁練習
   rngSeed: string;                        // 抽題/擲硬幣用 seeded RNG，可重放
 }
+
+interface ResolveResult {
+  playerIndex: 0 | 1;
+  accuracy: number;                       // 0..1
+  damage: number;
+  charMarks: CharMark[];                  // 逐字三色（01 §3.1），前端結算畫面直接上色
+  remainingSec: number;
+  isPerfect: boolean;
+}
+
+// 逐字比對結果——計分與 UI 共用同一份，別在前端重算
+type Mark = 'green' | 'yellow' | 'gray';  // 音對字對 / 字對音錯 / 全錯
+interface CharMark { char: string; mark: Mark; }
+
+// 全場加權平均正確率（雙殺判定用；權重＝該次傷害）
+interface PlayerState {
+  hp: number;
+  items: ItemId[];
+  reads: { accuracy: number; damage: number }[];  // 用來算加權平均
+}
 ```
+
+**雙殺判定**（01 §3.2）在引擎的 `ROUND_RESOLVED` 收尾時計算：若雙方 hp ≤ 0，各自 `Σ(accuracy·damage) / Σdamage`，高者 `phase = matchResult` 且 `winner = i`；差 < `balance.drawThreshold`（0.02）則 `winner = 'draw'`。此純函式必須有單元測試。
 
 ### GameEvent（節錄）
 

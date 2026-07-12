@@ -1,0 +1,12 @@
+[
+  { "id": "zh-e1", "lang": "zh-TW", "type": "normal", "difficulty": 1, "timeLimitSec": 6, "text": "吃葡萄不吐葡萄皮", "tags": ["經典"] },
+  { "id": "zh-e2", "lang": "zh-TW", "type": "normal", "difficulty": 1, "timeLimitSec": 6, "text": "紅鳳凰粉鳳凰", "tags": ["經典"] },
+  { "id": "zh-e3", "lang": "zh-TW", "type": "normal", "difficulty": 1, "timeLimitSec": 6, "text": "牛郎戀劉娘", "tags": ["短"] },
+  { "id": "zh-n1", "lang": "zh-TW", "type": "normal", "difficulty": 2, "timeLimitSec": 9, "text": "四是四十是十，十四是十四四十是四十", "tags": ["數字", "經典"] },
+  { "id": "zh-n2", "lang": "zh-TW", "type": "normal", "difficulty": 2, "timeLimitSec": 9, "text": "門口一個盆門外一個瓶，盆碰瓶盆破瓶也破", "tags": ["經典"] },
+  { "id": "zh-n3", "lang": "zh-TW", "type": "normal", "difficulty": 2, "timeLimitSec": 10, "text": "扁擔長板凳寬，扁擔想綁在板凳上", "tags": ["經典"] },
+  { "id": "zh-h1", "lang": "zh-TW", "type": "normal", "difficulty": 3, "timeLimitSec": 11, "text": "四十四隻石獅子是死是四十四隻石獅子", "tags": ["數字", "經典"] },
+  { "id": "zh-h2", "lang": "zh-TW", "type": "normal", "difficulty": 3, "timeLimitSec": 11, "text": "黑化肥發灰會揮發，灰化肥揮發會發黑", "tags": ["進階"] },
+  { "id": "zh-x1", "lang": "zh-TW", "type": "normal", "difficulty": 4, "timeLimitSec": 13, "text": "八百標兵奔北坡砲兵並排北邊跑，砲兵怕把標兵碰標兵怕碰砲兵砲", "tags": ["地獄"] },
+  { "id": "zh-x2", "lang": "zh-TW", "type": "normal", "difficulty": 4, "timeLimitSec": 13, "text": "紅鯉魚與綠鯉魚與驢，紅鯉魚綠鯉魚驢一起去旅遊", "tags": ["地獄"] }
+]

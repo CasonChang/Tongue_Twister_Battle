@@ -1,0 +1,46 @@
+// 所有平衡數值集中於此，方便之後調整（docs/01 §3.2）。
+import type { Difficulty } from './types';
+
+export const balance = {
+  // 血量
+  playerHp: 100,
+
+  // 木人樁練習：各難度的木人樁血量
+  dummyHp: { 1: 60, 2: 100, 3: 150, 4: 200 } as Record<Difficulty, number>,
+
+  // 傷害公式：damage = round(base * acc^2) + round(timeBonusMax * timeFrac * acc) + perfectBonus
+  baseDamage: 20,
+  timeBonusMax: 5, // 提早唸完最多額外 +5（乘上正確率）
+  perfectThreshold: 0.95,
+  perfectBonus: 5,
+
+  // 計時：倒數 = 題目 timeLimitSec + 這個緩衝
+  countdownBufferSec: 5,
+
+  // 正確率三色門檻
+  toneWrongScore: 0.5, // 黃：字對音錯
+
+  // 雙殺加權判定：全場加權平均正確率差距 < 此值視為平手（docs/01 §3.2）
+  drawThreshold: 0.02,
+
+  // 道具
+  itemsPerPlayer: 3,
+  timeStealSec: 4, // ⏱️ 時間掠奪：對方倒數 -4
+  minCountdownSec: 5, // 倒數不會低於此
+  maskRatio: 0.25, // 🕳️ 文字遮蔽：遮 25% 的字
+  healAmount: 10, // 💚 回血貼布 +10
+} as const;
+
+/** 難度數值 → UI 標籤 */
+export function difficultyLabel(d: Difficulty): { label: string; en: string; color: string } {
+  switch (d) {
+    case 1:
+      return { label: 'Easy', en: 'Easy', color: '#22c55e' };
+    case 2:
+      return { label: 'Normal', en: 'Normal', color: '#3b82f6' };
+    case 3:
+      return { label: 'Hard', en: 'Hard', color: '#f97316' };
+    case 4:
+      return { label: '地獄', en: 'Hell', color: '#ef4444' };
+  }
+}

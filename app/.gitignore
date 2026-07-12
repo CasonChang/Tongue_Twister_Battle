@@ -1,0 +1,7 @@
+node_modules
+dist
+*.tsbuildinfo
+.DS_Store
+# tsc -b (composite) 為 vite.config.ts 產生的輸出
+vite.config.js
+vite.config.d.ts

@@ -1,0 +1,12 @@
+[
+  { "id": "en-e1", "lang": "en-US", "type": "normal", "difficulty": 1, "timeLimitSec": 5, "text": "Red lorry yellow lorry", "tags": ["short"] },
+  { "id": "en-e2", "lang": "en-US", "type": "normal", "difficulty": 1, "timeLimitSec": 5, "text": "Six sticky skeletons", "tags": ["short"] },
+  { "id": "en-e3", "lang": "en-US", "type": "normal", "difficulty": 1, "timeLimitSec": 6, "text": "A proper copper coffee pot", "tags": ["short"] },
+  { "id": "en-n1", "lang": "en-US", "type": "normal", "difficulty": 2, "timeLimitSec": 9, "text": "She sells sea shells by the sea shore", "tags": ["classic"] },
+  { "id": "en-n2", "lang": "en-US", "type": "normal", "difficulty": 2, "timeLimitSec": 9, "text": "Fuzzy Wuzzy was a bear Fuzzy Wuzzy had no hair", "tags": ["classic"] },
+  { "id": "en-n3", "lang": "en-US", "type": "normal", "difficulty": 2, "timeLimitSec": 10, "text": "How much wood would a woodchuck chuck if a woodchuck could chuck wood", "tags": ["classic"] },
+  { "id": "en-h1", "lang": "en-US", "type": "normal", "difficulty": 3, "timeLimitSec": 11, "text": "Peter Piper picked a peck of pickled peppers", "tags": ["classic"] },
+  { "id": "en-h2", "lang": "en-US", "type": "normal", "difficulty": 3, "timeLimitSec": 11, "text": "Betty Botter bought some butter but she said the butter is bitter", "tags": ["advanced"] },
+  { "id": "en-x1", "lang": "en-US", "type": "normal", "difficulty": 4, "timeLimitSec": 13, "text": "The thirty three thieves thought that they thrilled the throne throughout Thursday", "tags": ["hell"] },
+  { "id": "en-x2", "lang": "en-US", "type": "normal", "difficulty": 4, "timeLimitSec": 14, "text": "Imagine an imaginary menagerie manager managing an imaginary menagerie", "tags": ["hell"] }
+]
