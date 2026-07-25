@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { isWebSpeechSupported } from '../speech/SpeechRecognizer';
 
-export function HomePage({ onStartPractice }: { onStartPractice: () => void }) {
+export function HomePage({
+  onStartPractice,
+  onStartBattle,
+}: {
+  onStartPractice: () => void;
+  onStartBattle: () => void;
+}) {
   const [micState, setMicState] = useState<'idle' | 'ok' | 'denied'>('idle');
   const supported = isWebSpeechSupported();
 
@@ -48,9 +54,12 @@ export function HomePage({ onStartPractice }: { onStartPractice: () => void }) {
           單獨練習：唸題、看逐字三色計分、把木人樁打倒。用來測試辨識與計分。
         </p>
         <div style={{ marginTop: 16 }}>
-          <button className="btn big secondary" disabled title="Phase 1 稍後開放">
-            🤝 單機對戰（兩人輪流）— 開發中
+          <button className="btn big" disabled={!supported} onClick={onStartBattle}>
+            🤝 單機對戰（兩人輪流）
           </button>
+          <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', marginTop: 12 }}>
+            兩人共用這台裝置：嗆聲 → 擲先攻 → 輪流唸同一題互打，血量歸零者落敗。
+          </p>
           <button
             className="btn big secondary"
             disabled

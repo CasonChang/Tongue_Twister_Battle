@@ -209,7 +209,7 @@ function mapSpeechError(err: string): string {
     case 'service-not-allowed':
       return '麥克風權限被拒絕，請在瀏覽器允許麥克風後重試。';
     case 'network':
-      return '語音辨識需要網路連線（Chrome 在雲端辨識）。';
+      return '語音辨識連線失敗。若使用 Brave/Firefox 請改用 Chrome 或 Edge（Brave 的隱私防護會擋住語音辨識）。';
     default:
       return `語音辨識錯誤：${err}`;
   }

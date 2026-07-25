@@ -268,3 +268,59 @@ body {
   font-size: 0.9rem;
   padding: 4px 0;
 }
+
+/* 單機雙人對戰 */
+.name-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  color: var(--text);
+  font-size: 1rem;
+  font-family: inherit;
+}
+.name-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 6px;
+  padding: 1px 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.tag.perfect {
+  background: var(--green);
+}
+
+.pass-device {
+  text-align: center;
+  background: var(--bg-card-2);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 1.05rem;
+}
+
+.resolve-block {
+  border-top: 1px solid var(--border);
+  padding: 14px 0;
+}
+.resolve-block:first-of-type {
+  border-top: none;
+}
+
+.heard-line {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  text-align: center;
+  word-break: break-word;
+}
