@@ -32,8 +32,8 @@ export const balance = {
   // 雙殺加權判定：全場加權平均正確率差距 < 此值視為平手（docs/01 §3.2）
   drawThreshold: 0.02,
 
-  // 道具
-  itemsPerPlayer: 3,
+  // 道具：四種各發一個、不重複，兩邊完全一樣（比的是用的時機，不是運氣）
+  itemsPerPlayer: 4,
   timeStealSec: 2, // ⏱️ 時間掠奪：對方作答時間 -2（作答時間砍半後，-4 太重）
   minCountdownSec: 3, // 被掠奪後仍不低於此
   maskRatio: 0.25, // 🕳️ 文字遮蔽：遮 25% 的字（只影響顯示）

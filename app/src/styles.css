@@ -483,6 +483,65 @@ body {
   color: var(--text-dim);
 }
 
+/* 道具說明浮動提示（滑鼠移上去就出現，第一次玩也看得懂） */
+.item[data-tip] {
+  position: relative;
+}
+.item[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  width: max-content;
+  max-width: 230px;
+  white-space: normal;
+  background: #0b0e1c;
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  text-align: left;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.14s ease, transform 0.14s ease;
+  z-index: 20;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+.item[data-tip]::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--accent);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.14s ease;
+  z-index: 21;
+}
+/* 停用時也要能看說明，所以 hover/focus 都顯示 */
+.item[data-tip]:hover::after,
+.item[data-tip]:focus-visible::after,
+.item[data-tip]:hover::before,
+.item[data-tip]:focus-visible::before {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+.item[data-tip]:hover::before,
+.item[data-tip]:focus-visible::before {
+  transform: translateX(-50%);
+}
+/* 停用的道具仍要能觸發提示 */
+.item:disabled {
+  pointer-events: auto;
+}
+
 .side-result {
   background: var(--bg-card);
   border: 1px solid var(--border);

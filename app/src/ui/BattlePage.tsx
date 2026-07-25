@@ -171,7 +171,7 @@ function ItemBar({
               key={`${id}-${idx}`}
               className={`item ${isChosen ? 'chosen' : ''}`}
               disabled={!selectable}
-              title={`${def.name}：${def.desc}`}
+              data-tip={`${def.emoji} ${def.name}｜${def.desc}`}
               onClick={() => onSelect(side, id)}
             >
               <span className="item-emoji">{def.emoji}</span>

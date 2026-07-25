@@ -155,10 +155,15 @@ describe('勝負判定', () => {
 });
 
 describe('道具系統', () => {
-  it('開局每人發 3 個道具', () => {
+  it('開局每人發四種道具各一個，不重複且兩邊相同', () => {
     const s = createGame('A', 'B', { skipTrashTalk: true });
-    expect(s.players[0].items).toHaveLength(3);
-    expect(s.players[1].items).toHaveLength(3);
+    expect(s.players[0].items).toHaveLength(balance.itemsPerPlayer);
+    expect(s.players[1].items).toEqual(s.players[0].items); // 兩邊完全公平
+    // 不重複
+    expect(new Set(s.players[0].items).size).toBe(s.players[0].items.length);
+    expect([...s.players[0].items].sort()).toEqual(
+      ['lifesteal', 'mask', 'noise', 'timeSteal'].sort(),
+    );
   });
 
   it('開場階段才能選道具，且可以改選/取消', () => {

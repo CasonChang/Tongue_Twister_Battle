@@ -2,7 +2,7 @@
 // 計時由外層 driver 負責，時間到就投遞 TIME_UP 事件。
 // 這份邏輯之後連線對戰的伺服器會直接重用，是規則的唯一真相。
 import { balance } from '../balance';
-import { dealItems, ITEMS, type ItemId } from '../items';
+import { dealStartingItems, ITEMS, type ItemId } from '../items';
 import type { Question, ScoreResult } from '../types';
 
 /**
@@ -97,16 +97,14 @@ export type GameEvent =
 export interface CreateOptions {
   /** 單機雙人兩人就在旁邊，不需要嗆聲階段 */
   skipTrashTalk?: boolean;
-  random?: () => number;
 }
 
 export function createGame(nameA: string, nameB: string, opts: CreateOptions = {}): GameState {
-  const rng = opts.random ?? Math.random;
   return {
     phase: opts.skipTrashTalk ? 'coinFlip' : 'trashTalk',
     players: [
-      { name: nameA, hp: balance.playerHp, items: dealItems(balance.itemsPerPlayer, rng), reads: [] },
-      { name: nameB, hp: balance.playerHp, items: dealItems(balance.itemsPerPlayer, rng), reads: [] },
+      { name: nameA, hp: balance.playerHp, items: dealStartingItems(), reads: [] },
+      { name: nameB, hp: balance.playerHp, items: dealStartingItems(), reads: [] },
     ],
     firstAttacker: 0,
     round: 1,

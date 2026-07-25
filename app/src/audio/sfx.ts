@@ -125,31 +125,165 @@ export function sfxDrain(): void {
   tone({ freq: 220, freqTo: 660, durSec: 0.35, type: 'sine', gain: 0.14 });
 }
 
-/** 干擾雜音（噪音干擾道具，在受害者裝置本地播放） */
+// ── 🔊 噪音干擾：人聲合成 ──────────────────────────────────
+// 白噪音聽起來像風聲，對「專心唸字」幾乎沒有干擾力。
+// 真正干擾人的是「別人的說話聲」，所以這裡用共振峰（formant）合成人聲：
+// 鋸齒波當聲帶震動源 → 三組帶通濾波器模擬聲道的母音共振 → 音節包絡。
+// 好處：零音檔、零授權問題、可無限變化。
+
+/** 各母音的前三個共振峰頻率（Hz），數值取自語音學的標準測量值 */
+const VOWELS: Record<string, [number, number, number]> = {
+  a: [730, 1090, 2440], // ㄚ
+  e: [530, 1840, 2480], // ㄝ
+  i: [270, 2290, 3010], // ㄧ
+  o: [570, 840, 2410], // ㄛ
+  u: [300, 870, 2240], // ㄨ
+};
+const VOWEL_KEYS = Object.keys(VOWELS);
+
+interface VoiceChain {
+  osc: OscillatorNode;
+  vibrato: OscillatorNode;
+  formants: BiquadFilterNode[];
+  env: GainNode;
+  stop: (t: number) => void;
+}
+
+/** 建一條人聲通道：聲帶 → 三組共振峰 → 音量包絡 */
+function createVoiceChain(c: AudioContext, out: AudioNode, baseFreq: number): VoiceChain {
+  const osc = c.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.value = baseFreq;
+
+  // 顫音：唱歌的關鍵，沒有它聽起來像機器
+  const vibrato = c.createOscillator();
+  vibrato.frequency.value = 5.5;
+  const vibratoGain = c.createGain();
+  vibratoGain.gain.value = baseFreq * 0.02;
+  vibrato.connect(vibratoGain).connect(osc.frequency);
+
+  const env = c.createGain();
+  env.gain.value = 0;
+
+  const formants = [0, 1, 2].map((i) => {
+    const bp = c.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = VOWELS.a[i];
+    bp.Q.value = 10;
+    const amp = c.createGain();
+    amp.gain.value = [1, 0.65, 0.35][i]; // 高次共振峰能量較低
+    osc.connect(bp).connect(amp).connect(env);
+    return bp;
+  });
+
+  env.connect(out);
+  return {
+    osc,
+    vibrato,
+    formants,
+    env,
+    stop: (t) => {
+      try {
+        osc.stop(t);
+        vibrato.stop(t);
+      } catch {
+        /* ignore */
+      }
+    },
+  };
+}
+
+/** 把共振峰切到某個母音 */
+function setVowel(chain: VoiceChain, vowel: string, t: number, glideSec = 0.06): void {
+  const f = VOWELS[vowel] ?? VOWELS.a;
+  chain.formants.forEach((bp, i) => {
+    bp.frequency.setTargetAtTime(f[i], t, glideSec);
+  });
+}
+
+type Interference = 'babble' | 'singing' | 'laugh';
+
+/**
+ * 播放干擾人聲。durSec 為最長播放秒數；回傳可提前停止的函式。
+ * 每次隨機挑一種：碎念、唱歌、大笑。
+ */
 export function playInterference(durSec: number): () => void {
   const c = getCtx();
   if (!c || muted) return () => {};
-  const len = Math.max(1, Math.floor(c.sampleRate * durSec));
-  const buf = c.createBuffer(1, len, c.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) {
-    // 忽大忽小的雜音，比穩定白噪更擾人
-    const wobble = 0.5 + 0.5 * Math.sin((i / c.sampleRate) * 11);
-    data[i] = (Math.random() * 2 - 1) * 0.5 * wobble;
+
+  const kinds: Interference[] = ['babble', 'singing', 'laugh'];
+  const kind = kinds[Math.floor(Math.random() * kinds.length)];
+
+  const master = c.createGain();
+  master.gain.value = 0.5;
+  master.connect(c.destination);
+
+  const t0 = c.currentTime + 0.05;
+  const tEnd = t0 + durSec;
+  const baseFreq = kind === 'singing' ? 196 : 132; // 唱歌音高較高
+  const chain = createVoiceChain(c, master, baseFreq);
+  chain.osc.start(t0);
+  chain.vibrato.start(t0);
+
+  const g = chain.env.gain;
+  g.setValueAtTime(0, t0);
+
+  let t = t0;
+  if (kind === 'laugh') {
+    // 「哈哈哈哈」：一串短促下降音，中間換氣
+    while (t < tEnd) {
+      const bursts = 3 + Math.floor(Math.random() * 4);
+      let pitch = baseFreq * (1.15 + Math.random() * 0.25);
+      for (let i = 0; i < bursts && t < tEnd; i++) {
+        chain.osc.frequency.setValueAtTime(pitch, t);
+        setVowel(chain, i % 2 === 0 ? 'a' : 'e', t, 0.02);
+        g.setValueAtTime(0.001, t);
+        g.exponentialRampToValueAtTime(0.9, t + 0.03);
+        g.exponentialRampToValueAtTime(0.02, t + 0.13);
+        pitch *= 0.93; // 每聲往下掉
+        t += 0.16;
+      }
+      t += 0.25 + Math.random() * 0.2; // 換氣
+    }
+  } else if (kind === 'singing') {
+    // 拉長的母音 + 音階跳動，像有人在旁邊哼歌
+    const scale = [1, 1.122, 1.26, 1.335, 1.498, 1.682]; // 大調音級
+    while (t < tEnd) {
+      const dur = 0.45 + Math.random() * 0.5;
+      const pitch = baseFreq * scale[Math.floor(Math.random() * scale.length)];
+      chain.osc.frequency.setTargetAtTime(pitch, t, 0.05);
+      setVowel(chain, VOWEL_KEYS[Math.floor(Math.random() * VOWEL_KEYS.length)], t, 0.1);
+      g.setValueAtTime(Math.max(0.001, g.value), t);
+      g.exponentialRampToValueAtTime(0.85, t + 0.12);
+      g.setValueAtTime(0.85, t + dur - 0.1);
+      g.exponentialRampToValueAtTime(0.25, t + dur);
+      t += dur;
+    }
+  } else {
+    // 碎念：快速的音節串，像旁邊有人一直講話
+    while (t < tEnd) {
+      const syl = 0.13 + Math.random() * 0.12;
+      const pitch = baseFreq * (0.85 + Math.random() * 0.5);
+      chain.osc.frequency.setTargetAtTime(pitch, t, 0.03);
+      setVowel(chain, VOWEL_KEYS[Math.floor(Math.random() * VOWEL_KEYS.length)], t, 0.03);
+      g.setValueAtTime(0.02, t);
+      g.exponentialRampToValueAtTime(0.85, t + syl * 0.35);
+      g.exponentialRampToValueAtTime(0.05, t + syl * 0.95);
+      t += syl;
+      if (Math.random() < 0.12) t += 0.2 + Math.random() * 0.25; // 偶爾停頓
+    }
   }
-  const src = c.createBufferSource();
-  src.buffer = buf;
-  src.loop = true;
-  const filt = c.createBiquadFilter();
-  filt.type = 'bandpass';
-  filt.frequency.value = 1200;
-  const g = c.createGain();
-  g.gain.value = 0.05;
-  src.connect(filt).connect(g).connect(c.destination);
-  src.start();
+
+  chain.stop(tEnd + 0.3);
+
   return () => {
+    const now = c.currentTime;
     try {
-      src.stop();
+      // 淡出避免爆音
+      master.gain.cancelScheduledValues(now);
+      master.gain.setValueAtTime(master.gain.value, now);
+      master.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+      chain.stop(now + 0.12);
     } catch {
       /* ignore */
     }

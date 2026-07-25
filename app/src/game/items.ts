@@ -46,9 +46,12 @@ export const ITEMS: Record<ItemId, ItemDef> = {
 
 export const ALL_ITEM_IDS = Object.keys(ITEMS) as ItemId[];
 
-/** 開局發牌：隨機抽 n 個道具（可重複，這樣才有「兩張同款」的運氣成分） */
-export function dealItems(n: number, random: () => number = Math.random): ItemId[] {
-  return Array.from({ length: n }, () => ALL_ITEM_IDS[Math.floor(random() * ALL_ITEM_IDS.length)]);
+/**
+ * 開局發牌：四種道具各發一個，不重複。
+ * 兩邊拿到的完全一樣，勝負只取決於「什麼時候用」而不是運氣。
+ */
+export function dealStartingItems(): ItemId[] {
+  return [...ALL_ITEM_IDS];
 }
 
 /** 依 maskRatio 隨機選出要遮住的字的索引（只影響顯示，不影響判定） */
