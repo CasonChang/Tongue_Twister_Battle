@@ -4,8 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { balance, difficultyLabel } from '../game/balance';
 import type { Difficulty, Question, ScoreResult } from '../game/types';
 import { countdownForQuestion, drawQuestion, questionPool, type LangFilter } from '../game/questions';
-import { evaluateRead } from '../game/scoring';
+import { evaluateReadBest } from '../game/scoring';
 import { WebSpeechRecognizer } from '../speech/WebSpeechRecognizer';
+import type { SpeechFinalResult } from '../speech/SpeechRecognizer';
 
 export type PracticePhase = 'ready' | 'reading' | 'result' | 'won';
 
@@ -18,7 +19,12 @@ export interface RoundResult {
   score: ScoreResult;
   damage: number;
   question: Question;
-  heard: string; // 玩家實際被辨識到的完整內容
+  /** 計分實際採用的辨識內容（N-best 中最接近題目的一組） */
+  heard: string;
+  /** 引擎第一名的結果，供對照 */
+  topOne: string;
+  /** 是否採用了非第一名的候選（代表引擎原本腦補錯了） */
+  usedAlternative: boolean;
 }
 
 export interface PracticeState {
@@ -70,30 +76,36 @@ export function usePracticeGame(settings: PracticeSettings) {
     }
   };
 
-  const applyResult = useCallback(
-    (transcript: string) => {
-      setState((s) => {
-        if (!s.question) return s;
-        const elapsedSec = (Date.now() - startedAt.current) / 1000;
-        const { score, damage } = evaluateRead(
-          s.question.lang,
-          s.question.text,
-          { transcript, elapsedSec },
-          s.totalSec,
-        );
-        const dummyHp = Math.max(0, s.dummyHp - damage);
-        const last: RoundResult = { score, damage, question: s.question, heard: transcript };
-        return {
-          ...s,
-          phase: dummyHp <= 0 ? 'won' : 'result',
-          dummyHp,
-          last,
-          interim: transcript,
-        };
-      });
-    },
-    [],
-  );
+  const applyResult = useCallback((result: SpeechFinalResult) => {
+    setState((s) => {
+      if (!s.question) return s;
+      const elapsedSec = (Date.now() - startedAt.current) / 1000;
+      const chunks = result.chunks.length > 0 ? result.chunks : [[result.transcript]];
+      const { score, damage } = evaluateReadBest(
+        s.question.lang,
+        s.question.text,
+        chunks,
+        elapsedSec,
+        s.totalSec,
+      );
+      const dummyHp = Math.max(0, s.dummyHp - damage);
+      const last: RoundResult = {
+        score,
+        damage,
+        question: s.question,
+        heard: score.heard || result.transcript,
+        topOne: result.transcript,
+        usedAlternative: score.usedAlternative,
+      };
+      return {
+        ...s,
+        phase: dummyHp <= 0 ? 'won' : 'result',
+        dummyHp,
+        last,
+        interim: score.heard || result.transcript,
+      };
+    });
+  }, []);
 
   const finishReading = useCallback(() => {
     if (finishing.current) return;
@@ -101,10 +113,10 @@ export function usePracticeGame(settings: PracticeSettings) {
     clearTick();
     const rec = recognizer.current;
     if (rec) {
-      rec.onFinal((t) => applyResult(t));
+      rec.onFinal((r) => applyResult(r));
       rec.stop();
     } else {
-      applyResult(state.interim);
+      applyResult({ transcript: state.interim, chunks: [[state.interim]] });
     }
   }, [applyResult, state.interim]);
 

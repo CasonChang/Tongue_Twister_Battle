@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { scoreZh, normalizeChineseNumbers } from './accuracy-zh';
 import { scoreEn } from './accuracy-en';
-import { computeDamage } from './index';
+import { computeDamage, buildCandidates, scoreBestCandidate } from './index';
 import type { ScoreResult } from '../types';
 
 describe('scoreZh', () => {
@@ -116,6 +116,50 @@ describe('scoreEn', () => {
   it('辨識回傳阿拉伯數字時仍能對上英文數字（six↔6、thirty three↔33）', () => {
     expect(scoreEn('Six sticky skeletons', '6 sticky skeletons').accuracy).toBe(1);
     expect(scoreEn('thirty three thieves', '33 thieves').accuracy).toBe(1);
+  });
+});
+
+describe('N-best 候選（方案 A：撈回被語言模型腦補掉的正確答案）', () => {
+  it('buildCandidates 組出所有片段組合', () => {
+    expect(buildCandidates([['a', 'b'], ['x', 'y']]).sort()).toEqual(['ax', 'ay', 'bx', 'by']);
+    expect(buildCandidates([])).toEqual(['']);
+    expect(buildCandidates([['solo']])).toEqual(['solo']);
+  });
+
+  it('引擎第一名被腦補時，改採較接近題目的候選', () => {
+    // 唸「會發黑」被腦補成「揮發黑」，但第 2 候選留有正確答案
+    const chunks = [['揮發黑', '會發黑']];
+    const r = scoreBestCandidate('zh-TW', '會發黑', chunks);
+    expect(r.heard).toBe('會發黑');
+    expect(r.usedAlternative).toBe(true);
+    expect(r.accuracy).toBe(1);
+  });
+
+  it('第一名就是最佳時不標記 usedAlternative', () => {
+    const r = scoreBestCandidate('zh-TW', '會發黑', [['會發黑', '揮發黑']]);
+    expect(r.usedAlternative).toBe(false);
+    expect(r.accuracy).toBe(1);
+  });
+
+  it('跨多個片段也能各自挑最佳', () => {
+    const chunks = [
+      ['扁擔長', '扁擔常'],
+      ['板凳寬', '板凳寬'],
+    ];
+    const r = scoreBestCandidate('zh-TW', '扁擔長板凳寬', chunks);
+    expect(r.accuracy).toBe(1);
+  });
+
+  it('所有候選都不對時，仍回傳最好的那個（不會爆）', () => {
+    const r = scoreBestCandidate('zh-TW', '石獅子', [['天氣好', '心情好']]);
+    expect(r.accuracy).toBe(0);
+    expect(r.heard.length).toBeGreaterThan(0);
+  });
+
+  it('英文同樣適用', () => {
+    const r = scoreBestCandidate('en-US', 'sea shells', [['see shells', 'sea shells']]);
+    expect(r.heard).toBe('sea shells');
+    expect(r.accuracy).toBe(1);
   });
 });
 

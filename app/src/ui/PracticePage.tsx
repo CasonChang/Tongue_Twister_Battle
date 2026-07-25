@@ -183,6 +183,18 @@ function PracticeBattle({ settings, onExit }: { settings: PracticeSettings; onEx
             <div className="interim has-text" style={{ textAlign: 'center' }}>
               {state.last.heard?.trim() ? state.last.heard : '（沒有辨識到聲音）'}
             </div>
+            {state.last.usedAlternative && (
+              <div
+                style={{
+                  fontSize: '0.8rem',
+                  color: 'var(--text-dim)',
+                  marginTop: 8,
+                  textAlign: 'center',
+                }}
+              >
+                🔎 引擎原本聽成「{state.last.topOne}」，已改用較接近題目的候選計分
+              </div>
+            )}
           </div>
 
           {state.phase === 'result' ? (
