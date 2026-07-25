@@ -14,8 +14,17 @@ export const balance = {
   perfectThreshold: 0.95,
   perfectBonus: 5,
 
-  // 計時：倒數 = 題目 timeLimitSec + 這個緩衝
+  // 計時：倒數 = round((題目 timeLimitSec + 緩衝) * countdownScale)，但不低於 minReadSec
   countdownBufferSec: 5,
+  /** 全域時間倍率。1.0 = 原本的寬鬆時間；0.5 = 砍半（實測太充裕，改成這個） */
+  countdownScale: 0.5,
+  minReadSec: 4,
+
+  // 自動流程各階段的秒數（docs/01 §2.2）
+  coinFlipSec: 3, // 擲硬幣演出
+  roundIntroSec: 10, // 「第 N 回合，X 先攻」倒數（也是未來道具階段的時間）
+  prepareSec: 3, // 看題時間
+  roundResultSec: 5, // 回合結算停留
 
   // 正確率三色門檻
   toneWrongScore: 0.5, // 黃：字對音錯

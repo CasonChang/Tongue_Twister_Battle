@@ -1,3 +1,4 @@
+import { balance } from '../balance';
 import type { Difficulty, Question } from '../types';
 import zhData from './zh.json';
 import enData from './en.json';
@@ -33,5 +34,6 @@ export function drawQuestion(
 }
 
 export function countdownForQuestion(q: Question, bufferSec: number): number {
-  return q.timeLimitSec + bufferSec;
+  const raw = (q.timeLimitSec + bufferSec) * balance.countdownScale;
+  return Math.max(balance.minReadSec, Math.round(raw));
 }

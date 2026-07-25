@@ -4,10 +4,18 @@
 import { balance } from '../balance';
 import type { Question, ScoreResult } from '../types';
 
+/**
+ * 對戰全程自動推進，玩家不需要按任何按鈕（單機雙人）。
+ * 每個階段的秒數集中在 balance.ts。
+ *
+ *   coinFlip(3s) → roundIntro(10s) → prepare(3s) → reading(題目時間)
+ *     → prepare(3s，同時顯示先攻結果) → reading → roundResult(5s) → roundIntro …
+ */
 export type Phase =
-  | 'trashTalk' // 嗆聲階段
+  | 'trashTalk' // 嗆聲階段（單機雙人不用，保留給連線對戰）
   | 'coinFlip' // 決定先後攻
-  | 'questionReveal' // 出題，等玩家準備
+  | 'roundIntro' // 「第 N 回合，X 先攻」倒數（未來的道具階段）
+  | 'prepare' // 看題時間
   | 'reading' // 某一方朗讀中
   | 'roundResult' // 本回合雙方都唸完
   | 'matchResult'; // 分出勝負
@@ -45,14 +53,20 @@ export type GameEvent =
   | { type: 'TRASH_TALK_END' }
   | { type: 'COIN_FLIPPED'; first: 0 | 1 }
   | { type: 'QUESTION_DRAWN'; question: Question }
-  | { type: 'READING_STARTED' }
+  | { type: 'ROUND_INTRO_END' }
+  | { type: 'PREPARE_END' }
   | { type: 'READ_RESOLVED'; score: ScoreResult; damage: number; heard: string }
   | { type: 'NEXT_ROUND' }
   | { type: 'REMATCH' };
 
-export function createGame(nameA: string, nameB: string): GameState {
+export interface CreateOptions {
+  /** 單機雙人兩人就在旁邊，不需要嗆聲階段 */
+  skipTrashTalk?: boolean;
+}
+
+export function createGame(nameA: string, nameB: string, opts: CreateOptions = {}): GameState {
   return {
-    phase: 'trashTalk',
+    phase: opts.skipTrashTalk ? 'coinFlip' : 'trashTalk',
     players: [
       { name: nameA, hp: balance.playerHp, reads: [] },
       { name: nameB, hp: balance.playerHp, reads: [] },
@@ -104,20 +118,25 @@ export function reduce(state: GameState, event: GameEvent): GameState {
 
     case 'COIN_FLIPPED':
       if (state.phase !== 'coinFlip') return state;
-      return { ...state, firstAttacker: event.first };
+      // 擲完硬幣進入回合開場（宣告誰先攻、第幾回合）
+      return { ...state, firstAttacker: event.first, phase: 'roundIntro' };
 
     case 'QUESTION_DRAWN':
+      // 抽題不改變階段，題目在 roundIntro 期間就備好
       return {
         ...state,
-        phase: 'questionReveal',
         question: event.question,
         usedQuestionIds: [...state.usedQuestionIds, event.question.id],
         currentReader: state.firstAttacker,
         roundResolves: [null, null],
       };
 
-    case 'READING_STARTED':
-      if (state.phase !== 'questionReveal' && state.phase !== 'roundResult') return state;
+    case 'ROUND_INTRO_END':
+      if (state.phase !== 'roundIntro') return state;
+      return { ...state, phase: 'prepare', currentReader: state.firstAttacker };
+
+    case 'PREPARE_END':
+      if (state.phase !== 'prepare') return state;
       return { ...state, phase: 'reading' };
 
     case 'READ_RESOLVED': {
@@ -148,14 +167,14 @@ export function reduce(state: GameState, event: GameEvent): GameState {
       const bothRead = resolves[0] !== null && resolves[1] !== null;
 
       if (!bothRead) {
-        // 先攻唸完 → 換後攻唸同一題。
-        // 注意：即使後攻已被打到 0 HP，仍然要讓他唸完這一擊（拚死還手，docs/01 §3.2）
+        // 先攻唸完 → 立刻結算他這一擊（扣血已完成），畫面在下個 prepare 顯示結果，
+        // 同時換後攻看題。即使後攻已被打到 0 HP 仍要讓他唸完（拚死還手，docs/01 §3.2）
         return {
           ...state,
           players,
           roundResolves: resolves,
           currentReader: secondAttacker,
-          phase: 'questionReveal', // 回到準備畫面，等第二位按開始
+          phase: 'prepare',
         };
       }
 
@@ -171,21 +190,23 @@ export function reduce(state: GameState, event: GameEvent): GameState {
       return winner === null ? next : { ...next, phase: 'matchResult', winner };
     }
 
-    case 'NEXT_ROUND':
+    case 'NEXT_ROUND': {
       if (state.phase !== 'roundResult') return state;
+      const nextFirst = other(state.firstAttacker); // 每回合交換先後攻
       return {
         ...state,
         round: state.round + 1,
-        firstAttacker: other(state.firstAttacker), // 每回合交換先後攻
+        firstAttacker: nextFirst,
         question: null,
-        currentReader: null,
+        currentReader: nextFirst,
         roundResolves: [null, null],
-        phase: 'questionReveal',
+        phase: 'roundIntro',
       };
+    }
 
     case 'REMATCH': {
-      const fresh = createGame(state.players[0].name, state.players[1].name);
-      return { ...fresh, phase: 'coinFlip' };
+      const fresh = createGame(state.players[0].name, state.players[1].name, { skipTrashTalk: true });
+      return fresh;
     }
 
     default:

@@ -324,3 +324,32 @@ body {
   text-align: center;
   word-break: break-word;
 }
+
+.coin {
+  font-size: 3rem;
+  animation: flip 0.7s ease-in-out infinite;
+}
+@keyframes flip {
+  0%, 100% { transform: rotateY(0deg) scale(1); }
+  50% { transform: rotateY(180deg) scale(1.15); }
+}
+
+/* 看題階段的大字倒數 */
+.prepare-count {
+  text-align: center;
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+/* 先攻成績即時公布時閃一下 */
+.resolve-flash {
+  animation: flash-in 0.35s ease;
+  border-color: var(--accent);
+}
+@keyframes flash-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: none; }
+}

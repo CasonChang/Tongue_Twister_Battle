@@ -4,7 +4,8 @@ import type { Difficulty } from '../game/types';
 import type { LangFilter } from '../game/questions';
 import { useLocalGame, type LocalGameSettings } from './useLocalGame';
 import { CharMarksView, MarksLegend } from './CharMarksView';
-import type { GameState } from '../game/engine/machine';
+import type { GameState, ResolveResult } from '../game/engine/machine';
+import { unlockAudio } from '../audio/sfx';
 
 const DIFFICULTIES: Difficulty[] = [1, 2, 3, 4];
 const LANGS: { key: LangFilter; label: string }[] = [
@@ -86,9 +87,15 @@ function BattleSetup({
           })}
         </div>
       </div>
+      <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
+        對戰開始後全程自動進行：看題 3 秒 → 依題目時間作答 → 換人 → 結算，不需要按任何按鈕。
+      </p>
       <button
         className="btn big"
-        onClick={() => onStart({ nameA: nameA || '玩家 1', nameB: nameB || '玩家 2', lang, difficulty })}
+        onClick={() => {
+          unlockAudio(); // 必須在使用者手勢中解鎖音效
+          onStart({ nameA: nameA || '玩家 1', nameB: nameB || '玩家 2', lang, difficulty });
+        }}
       >
         開始對戰
       </button>
@@ -137,47 +144,54 @@ function Battle({ settings, onExit }: { settings: LocalGameSettings; onExit: () 
         ← 重新設定
       </button>
 
-      {state.phase !== 'trashTalk' && state.phase !== 'matchResult' && <HpBars state={state} />}
+      {state.phase !== 'matchResult' && <HpBars state={state} />}
       {game.error && <div className="error">{game.error}</div>}
-
-      {state.phase === 'trashTalk' && (
-        <div className="card" style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '2.5rem' }}>🔥</div>
-          <h2 style={{ margin: '8px 0' }}>嗆聲時間</h2>
-          <p style={{ color: 'var(--text-dim)' }}>
-            {settings.nameA} vs {settings.nameB}（{meta.label}）
-            <br />
-            互相放話，暖身一下！
-          </p>
-          <div className="countdown">{game.remainingSec.toFixed(0)}s</div>
-          <button className="btn big secondary" style={{ marginTop: 12 }} onClick={game.skipTrashTalk}>
-            跳過
-          </button>
-        </div>
-      )}
 
       {state.phase === 'coinFlip' && (
         <div className="card" style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '2.5rem' }}>🪙</div>
-          <h2>決定先後攻</h2>
-          <p style={{ color: 'var(--text-dim)' }}>先攻者先唸，之後每回合交換</p>
-          <button className="btn big" onClick={game.flipCoin}>
-            擲硬幣
-          </button>
+          <div className="coin">🪙</div>
+          <h2 style={{ margin: '8px 0' }}>決定先後攻…</h2>
+          <p style={{ color: 'var(--text-dim)' }}>
+            {settings.nameA} vs {settings.nameB}（{meta.label}）
+          </p>
         </div>
       )}
 
-      {state.phase === 'questionReveal' && state.question && state.currentReader !== null && (
-        <div className="card">
-          <div className="pass-device">
-            👉 換 <b>{state.players[state.currentReader].name}</b> 唸
-            {state.roundResolves[state.currentReader === 0 ? 1 : 0] && '（同一題）'}
+      {state.phase === 'roundIntro' && state.currentReader !== null && (
+        <div className="card" style={{ textAlign: 'center' }}>
+          <div className="label">第 {state.round} 回合</div>
+          <h2 style={{ margin: '10px 0', fontSize: '1.6rem' }}>
+            ⚔️ <b>{state.players[state.firstAttacker].name}</b> 先攻
+          </h2>
+          <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>準備一下，即將開始</p>
+          <div className={`countdown ${game.remainingSec <= 3 ? 'low' : ''}`}>
+            {Math.ceil(game.remainingSec)}
           </div>
-          <div className="question-text">{state.question.text}</div>
-          <button className="btn big" onClick={game.startReading}>
-            🎤 開始唸（{game.totalSec} 秒）
-          </button>
         </div>
+      )}
+
+      {state.phase === 'prepare' && state.question && state.currentReader !== null && (
+        <>
+          {/* 先攻已唸完時，這裡順帶公布他的成績（一講完就扣血了） */}
+          {state.roundResolves[other(state.currentReader)] && (
+            <ResolveCard
+              name={state.players[other(state.currentReader)].name}
+              resolve={state.roundResolves[other(state.currentReader)]!}
+              compact
+            />
+          )}
+          <div className="card">
+            <div className="pass-device">
+              👉 換 <b>{state.players[state.currentReader].name}</b> 唸
+              {state.roundResolves[other(state.currentReader)] && '（同一題）'}
+            </div>
+            <div className="question-text">{state.question.text}</div>
+            <div className="prepare-count">{Math.ceil(game.remainingSec)}</div>
+            <div style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.85rem' }}>
+              看題中…作答 {game.totalSec} 秒
+            </div>
+          </div>
+        </>
       )}
 
       {state.phase === 'reading' && state.question && state.currentReader !== null && (
@@ -194,29 +208,60 @@ function Battle({ settings, onExit }: { settings: LocalGameSettings; onExit: () 
           <div className="question-text">{state.question.text}</div>
           <div className={`interim ${game.interim ? 'has-text' : ''}`}>
             <span className="mic-dot" />
-            {game.interim || '（開始唸，這裡會顯示辨識中的文字…）'}
+            {game.interim || '（開始唸…）'}
           </div>
-          <button className="btn big" style={{ marginTop: 12 }} onClick={game.finishReading}>
-            ✓ 唸完了
-          </button>
         </div>
       )}
 
       {(state.phase === 'roundResult' || state.phase === 'matchResult') && (
-        <RoundOrMatchResult state={state} onNext={game.nextRound} onRematch={game.rematch} onExit={onExit} />
+        <RoundOrMatchResult
+          state={state}
+          remainingSec={game.remainingSec}
+          onRematch={game.rematch}
+          onExit={onExit}
+        />
       )}
     </>
   );
 }
 
+const other = (i: 0 | 1): 0 | 1 => (i === 0 ? 1 : 0);
+
+/** 單人的成績卡：正確率、傷害、逐字三色、辨識內容 */
+function ResolveCard({
+  name,
+  resolve,
+  compact,
+}: {
+  name: string;
+  resolve: ResolveResult;
+  compact?: boolean;
+}) {
+  return (
+    <div className={`card ${compact ? 'resolve-flash' : ''}`}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <b>{compact ? `${name} 的成績` : name}</b>
+        <span>
+          <span style={{ color: 'var(--accent)' }}>{Math.round(resolve.score.accuracy * 100)}%</span>
+          {'　'}
+          <span style={{ color: 'var(--red)' }}>-{resolve.damage}</span>
+          {resolve.score.isPerfect && <span className="tag perfect">PERFECT</span>}
+        </span>
+      </div>
+      <CharMarksView marks={resolve.score.charMarks} />
+      <div className="heard-line">你唸的：{resolve.heard || '（沒有辨識到聲音）'}</div>
+    </div>
+  );
+}
+
 function RoundOrMatchResult({
   state,
-  onNext,
+  remainingSec,
   onRematch,
   onExit,
 }: {
   state: GameState;
-  onNext: () => void;
+  remainingSec: number;
   onRematch: () => void;
   onExit: () => void;
 }) {
@@ -248,7 +293,16 @@ function RoundOrMatchResult({
       )}
 
       <div className="card">
-        <span className="label">{isMatch ? '最後一回合' : `第 ${state.round} 回合結果`}</span>
+        <div className="row" style={{ justifyContent: 'space-between' }}>
+          <span className="label" style={{ margin: 0 }}>
+            {isMatch ? '最後一回合' : `第 ${state.round} 回合結果`}
+          </span>
+          {!isMatch && (
+            <span className="label" style={{ margin: 0 }}>
+              {Math.ceil(remainingSec)} 秒後續戰
+            </span>
+          )}
+        </div>
         {state.roundResolves.map((r, i) =>
           r ? (
             <div key={i} className="resolve-block">
@@ -271,22 +325,16 @@ function RoundOrMatchResult({
         <MarksLegend />
       </div>
 
-      <div>
-        {isMatch ? (
-          <>
-            <button className="btn big" onClick={onRematch}>
-              🔄 再來一局
-            </button>
-            <button className="btn big secondary" style={{ marginTop: 10 }} onClick={onExit}>
-              離開
-            </button>
-          </>
-        ) : (
-          <button className="btn big" onClick={onNext}>
-            下一回合 →
+      {isMatch && (
+        <div>
+          <button className="btn big" onClick={onRematch}>
+            🔄 再來一局
           </button>
-        )}
-      </div>
+          <button className="btn big secondary" style={{ marginTop: 10 }} onClick={onExit}>
+            離開
+          </button>
+        </div>
+      )}
     </>
   );
 }

@@ -17,46 +17,63 @@ const score = (accuracy: number): ScoreResult => ({
   isPerfect: accuracy >= 0.95,
 });
 
-/** 走完「出題 → 兩人各唸一次」的流程 */
+/** 走完「出題 → 開場 → 兩人各唸一次」的流程 */
 function playRound(s: GameState, id: string, dmgFirst: number, dmgSecond: number, accFirst = 0.8, accSecond = 0.8) {
   let st = reduce(s, { type: 'QUESTION_DRAWN', question: q(id) });
-  st = reduce(st, { type: 'READING_STARTED' });
+  if (st.phase === 'roundIntro') st = reduce(st, { type: 'ROUND_INTRO_END' });
+  st = reduce(st, { type: 'PREPARE_END' });
   st = reduce(st, { type: 'READ_RESOLVED', score: score(accFirst), damage: dmgFirst, heard: '' });
-  st = reduce(st, { type: 'READING_STARTED' });
+  st = reduce(st, { type: 'PREPARE_END' });
   st = reduce(st, { type: 'READ_RESOLVED', score: score(accSecond), damage: dmgSecond, heard: '' });
   return st;
 }
 
+/** 單機雙人：跳過嗆聲，擲完硬幣、走完開場，停在可出題的狀態 */
 function start(): GameState {
-  let s = createGame('A', 'B');
-  s = reduce(s, { type: 'TRASH_TALK_END' });
-  s = reduce(s, { type: 'COIN_FLIPPED', first: 0 });
-  return s;
+  const s = createGame('A', 'B', { skipTrashTalk: true });
+  return reduce(s, { type: 'COIN_FLIPPED', first: 0 });
 }
 
 describe('遊戲流程', () => {
-  it('嗆聲 → 擲硬幣 → 出題', () => {
-    let s = createGame('A', 'B');
-    expect(s.phase).toBe('trashTalk');
-    expect(s.players[0].hp).toBe(100);
-    s = reduce(s, { type: 'TRASH_TALK_END' });
+  it('單機雙人跳過嗆聲，直接從擲硬幣開始', () => {
+    const s = createGame('A', 'B', { skipTrashTalk: true });
     expect(s.phase).toBe('coinFlip');
-    s = reduce(s, { type: 'COIN_FLIPPED', first: 1 });
-    expect(s.firstAttacker).toBe(1);
-    s = reduce(s, { type: 'QUESTION_DRAWN', question: q('q1') });
-    expect(s.phase).toBe('questionReveal');
-    expect(s.currentReader).toBe(1); // 先攻者先唸
+    expect(s.players[0].hp).toBe(100);
   });
 
-  it('先攻唸完換後攻唸同一題，傷害打在對方身上', () => {
+  it('連線模式仍保留嗆聲階段', () => {
+    let s = createGame('A', 'B');
+    expect(s.phase).toBe('trashTalk');
+    s = reduce(s, { type: 'TRASH_TALK_END' });
+    expect(s.phase).toBe('coinFlip');
+  });
+
+  it('擲硬幣 → 回合開場 → 看題 → 朗讀', () => {
+    let s = createGame('A', 'B', { skipTrashTalk: true });
+    s = reduce(s, { type: 'COIN_FLIPPED', first: 1 });
+    expect(s.firstAttacker).toBe(1);
+    expect(s.phase).toBe('roundIntro'); // 先宣告誰先攻、第幾回合
+    s = reduce(s, { type: 'QUESTION_DRAWN', question: q('q1') });
+    expect(s.phase).toBe('roundIntro'); // 抽題不打斷開場
+    s = reduce(s, { type: 'ROUND_INTRO_END' });
+    expect(s.phase).toBe('prepare');
+    expect(s.currentReader).toBe(1); // 先攻者先唸
+    s = reduce(s, { type: 'PREPARE_END' });
+    expect(s.phase).toBe('reading');
+  });
+
+  it('先攻唸完立刻結算並換後攻看題（同一題）', () => {
     let s = start(); // firstAttacker = 0
     s = reduce(s, { type: 'QUESTION_DRAWN', question: q('q1') });
-    s = reduce(s, { type: 'READING_STARTED' });
+    s = reduce(s, { type: 'ROUND_INTRO_END' });
+    s = reduce(s, { type: 'PREPARE_END' });
     s = reduce(s, { type: 'READ_RESOLVED', score: score(0.9), damage: 20, heard: '' });
-    expect(s.players[1].hp).toBe(80); // 玩家0 打玩家1
-    expect(s.currentReader).toBe(1); // 換玩家1 唸
+    expect(s.players[1].hp).toBe(80); // 玩家0 打玩家1，一講完就扣血
+    expect(s.roundResolves[0]).not.toBeNull(); // 先攻成績馬上可公布
+    expect(s.currentReader).toBe(1); // 換玩家1
+    expect(s.phase).toBe('prepare'); // 直接進看題，不需按鈕
     expect(s.question?.id).toBe('q1'); // 同一題
-    s = reduce(s, { type: 'READING_STARTED' });
+    s = reduce(s, { type: 'PREPARE_END' });
     s = reduce(s, { type: 'READ_RESOLVED', score: score(0.5), damage: 8, heard: '' });
     expect(s.players[0].hp).toBe(92);
     expect(s.phase).toBe('roundResult');
@@ -88,14 +105,15 @@ describe('勝負判定', () => {
     let s = start();
     s.players[1].hp = 15;
     s = reduce(s, { type: 'QUESTION_DRAWN', question: q('q1') });
-    s = reduce(s, { type: 'READING_STARTED' });
+    s = reduce(s, { type: 'ROUND_INTRO_END' });
+    s = reduce(s, { type: 'PREPARE_END' });
     // 先攻一擊把後攻打死
     s = reduce(s, { type: 'READ_RESOLVED', score: score(1), damage: 30, heard: '' });
     expect(s.players[1].hp).toBe(0);
     expect(s.phase).not.toBe('matchResult'); // 還沒結束
     expect(s.currentReader).toBe(1); // 後攻仍要唸
     // 後攻還手但沒打死對方 → 先攻獲勝
-    s = reduce(s, { type: 'READING_STARTED' });
+    s = reduce(s, { type: 'PREPARE_END' });
     s = reduce(s, { type: 'READ_RESOLVED', score: score(0.6), damage: 10, heard: '' });
     expect(s.phase).toBe('matchResult');
     expect(s.winner).toBe(0);

@@ -1,13 +1,23 @@
-// 單機雙人（hot-seat）驅動層：把計時器與語音辨識接到純函式引擎上。
-// 引擎本身不含副作用，這裡負責投遞事件（docs/02 §3 GameDriver）。
+// 單機雙人（hot-seat）驅動層：把計時器、語音辨識、音效接到純函式引擎上。
+// 對戰開始後全程自動推進，玩家不需按任何按鈕（docs/02 §3 GameDriver）。
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { balance } from '../game/balance';
-import { createGame, reduce, type GameState } from '../game/engine/machine';
+import { createGame, reduce, type GameEvent, type GameState } from '../game/engine/machine';
 import { countdownForQuestion, drawQuestion, questionPool, type LangFilter } from '../game/questions';
 import { evaluateReadBest } from '../game/scoring';
 import type { Difficulty } from '../game/types';
 import { WebSpeechRecognizer } from '../speech/WebSpeechRecognizer';
 import type { SpeechFinalResult } from '../speech/SpeechRecognizer';
+import {
+  sfxGo,
+  sfxHit,
+  sfxLose,
+  sfxPerfect,
+  sfxRoundStart,
+  sfxTick,
+  sfxWin,
+  unlockAudio,
+} from '../audio/sfx';
 
 export interface LocalGameSettings {
   nameA: string;
@@ -16,172 +26,200 @@ export interface LocalGameSettings {
   difficulty: Difficulty;
 }
 
-const TRASH_TALK_SEC = 10;
-
 export function useLocalGame(settings: LocalGameSettings) {
   const pool = useMemo(
     () => questionPool(settings.lang, [settings.difficulty]),
     [settings.lang, settings.difficulty],
   );
 
-  const [state, setState] = useState<GameState>(() => createGame(settings.nameA, settings.nameB));
-  const [remainingSec, setRemainingSec] = useState(TRASH_TALK_SEC);
+  const [state, setState] = useState<GameState>(() =>
+    createGame(settings.nameA, settings.nameB, { skipTrashTalk: true }),
+  );
+  const [remainingSec, setRemainingSec] = useState<number>(balance.coinFlipSec);
   const [totalSec, setTotalSec] = useState(0);
   const [interim, setInterim] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const recognizer = useRef<WebSpeechRecognizer | null>(null);
-  const tick = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAt = useRef(0);
-  const finishing = useRef(false);
+  /** 最後一次聽到聲音的時間，用來算「提早唸完」的時間加成（取代手動按鈕） */
+  const lastSpeechAt = useRef(0);
+  const resolving = useRef(false);
+  const totalSecRef = useRef(0);
 
-  const clearTick = () => {
-    if (tick.current) {
-      clearInterval(tick.current);
-      tick.current = null;
-    }
-  };
+  const dispatch = useCallback((ev: GameEvent) => setState((s) => reduce(s, ev)), []);
 
-  const dispatch = useCallback((ev: Parameters<typeof reduce>[1]) => {
-    setState((s) => reduce(s, ev));
+  const setCountdown = useCallback((q: ReturnType<typeof drawQuestion>) => {
+    const sec = q ? countdownForQuestion(q, balance.countdownBufferSec) : 0;
+    totalSecRef.current = sec;
+    setTotalSec(sec);
   }, []);
 
-  // 嗆聲階段倒數
-  useEffect(() => {
-    if (state.phase !== 'trashTalk') return;
-    setRemainingSec(TRASH_TALK_SEC);
-    const startAt = Date.now();
-    const t = setInterval(() => {
-      const left = TRASH_TALK_SEC - (Date.now() - startAt) / 1000;
-      if (left <= 0) {
-        clearInterval(t);
-        dispatch({ type: 'TRASH_TALK_END' });
-      } else {
-        setRemainingSec(left);
-      }
-    }, 100);
-    return () => clearInterval(t);
-  }, [state.phase, dispatch]);
-
-  const skipTrashTalk = useCallback(() => dispatch({ type: 'TRASH_TALK_END' }), [dispatch]);
-
-  /** 擲硬幣決定先攻，接著抽第一題 */
-  const flipCoin = useCallback(() => {
+  /** 擲硬幣 → 決定先攻並抽第一題 */
+  const doCoinFlip = useCallback(() => {
     const first: 0 | 1 = Math.random() < 0.5 ? 0 : 1;
     setState((s) => {
       let next = reduce(s, { type: 'COIN_FLIPPED', first });
       const question = drawQuestion(pool, next.usedQuestionIds);
       if (question) {
         next = reduce(next, { type: 'QUESTION_DRAWN', question });
-        setTotalSec(countdownForQuestion(question, balance.countdownBufferSec));
+        setCountdown(question);
       }
       return next;
     });
-  }, [pool]);
+  }, [pool, setCountdown]);
 
-  const applyResult = useCallback(
-    (result: SpeechFinalResult) => {
-      setState((s) => {
-        if (!s.question) return s;
-        const elapsedSec = (Date.now() - startedAt.current) / 1000;
-        const chunks = result.chunks.length > 0 ? result.chunks : [[result.transcript]];
-        const { score, damage } = evaluateReadBest(
-          s.question.lang,
-          s.question.text,
-          chunks,
-          elapsedSec,
-          totalSec,
-        );
-        return reduce(s, {
-          type: 'READ_RESOLVED',
-          score,
-          damage,
-          heard: score.heard || result.transcript,
-        });
+  const applyResult = useCallback((result: SpeechFinalResult) => {
+    setState((s) => {
+      if (!s.question || s.phase !== 'reading') return s;
+      // 以「最後一次出聲」當結束時間，提早唸完仍有時間加成
+      const endedAt = lastSpeechAt.current || Date.now();
+      const elapsedSec = Math.max(0, (endedAt - startedAt.current) / 1000);
+      const chunks = result.chunks.length > 0 ? result.chunks : [[result.transcript]];
+      const { score, damage } = evaluateReadBest(
+        s.question.lang,
+        s.question.text,
+        chunks,
+        elapsedSec,
+        totalSecRef.current,
+      );
+      sfxHit(damage);
+      if (score.isPerfect) sfxPerfect();
+      return reduce(s, {
+        type: 'READ_RESOLVED',
+        score,
+        damage,
+        heard: score.heard || result.transcript,
       });
-      setInterim('');
-    },
-    [totalSec],
-  );
+    });
+    setInterim('');
+  }, []);
 
-  const finishReading = useCallback(() => {
-    if (finishing.current) return;
-    finishing.current = true;
-    clearTick();
+  const stopReading = useCallback(() => {
+    if (resolving.current) return;
+    resolving.current = true;
     const rec = recognizer.current;
     if (rec) {
       rec.onFinal((r) => applyResult(r));
       rec.stop();
     } else {
-      applyResult({ transcript: interim, chunks: [[interim]] });
+      applyResult({ transcript: '', chunks: [] });
     }
-  }, [applyResult, interim]);
+  }, [applyResult]);
 
-  const startReading = useCallback(() => {
-    if (!state.question) return;
-    finishing.current = false;
-    startedAt.current = Date.now();
-    const total = totalSec;
-    setInterim('');
-    setError(null);
-    setRemainingSec(total);
-    dispatch({ type: 'READING_STARTED' });
+  const beginReading = useCallback(
+    (lang: 'zh-TW' | 'en-US') => {
+      resolving.current = false;
+      startedAt.current = Date.now();
+      lastSpeechAt.current = 0;
+      setInterim('');
+      setError(null);
+      sfxGo();
 
-    const rec = new WebSpeechRecognizer();
-    recognizer.current = rec;
-    rec.onInterim((t) => setInterim(t));
-    rec.onError((e) => setError(mapSpeechError(e)));
-    try {
-      rec.start(state.question.lang);
-    } catch {
-      setError('此瀏覽器不支援語音辨識，請用 Chrome 或 Edge。');
-    }
-
-    clearTick();
-    tick.current = setInterval(() => {
-      const left = total - (Date.now() - startedAt.current) / 1000;
-      if (left <= 0) finishReading();
-      else setRemainingSec(left);
-    }, 100);
-  }, [state.question, totalSec, dispatch, finishReading]);
-
-  /** 進入下一回合並抽新題 */
-  const nextRound = useCallback(() => {
-    setState((s) => {
-      let next = reduce(s, { type: 'NEXT_ROUND' });
-      const question = drawQuestion(pool, next.usedQuestionIds);
-      if (question) {
-        next = reduce(next, { type: 'QUESTION_DRAWN', question });
-        setTotalSec(countdownForQuestion(question, balance.countdownBufferSec));
+      const rec = new WebSpeechRecognizer();
+      recognizer.current = rec;
+      rec.onInterim((t) => {
+        lastSpeechAt.current = Date.now();
+        setInterim(t);
+      });
+      rec.onError((e) => setError(mapSpeechError(e)));
+      try {
+        rec.start(lang);
+      } catch {
+        setError('此瀏覽器不支援語音辨識，請用 Chrome 或 Edge。');
       }
-      return next;
-    });
-  }, [pool]);
+    },
+    [],
+  );
+
+  // ── 自動推進：每個階段一個計時器 ────────────────────────────────
+  useEffect(() => {
+    const phase = state.phase;
+    if (phase === 'matchResult') return;
+
+    // 各階段的持續秒數
+    const durations: Partial<Record<GameState['phase'], number>> = {
+      coinFlip: balance.coinFlipSec,
+      roundIntro: balance.roundIntroSec,
+      prepare: balance.prepareSec,
+      reading: totalSecRef.current,
+      roundResult: balance.roundResultSec,
+    };
+    const dur = durations[phase];
+    if (!dur) return;
+
+    if (phase === 'roundIntro') sfxRoundStart();
+    if (phase === 'reading' && state.question) beginReading(state.question.lang);
+
+    const start = Date.now();
+    setRemainingSec(dur);
+    let lastWhole = Math.ceil(dur);
+
+    const timer = setInterval(() => {
+      const left = dur - (Date.now() - start) / 1000;
+
+      // 倒數 3、2、1 的嗶聲
+      const whole = Math.ceil(left);
+      if (whole !== lastWhole && whole > 0 && whole <= 3) sfxTick();
+      lastWhole = whole;
+
+      if (left <= 0) {
+        clearInterval(timer);
+        setRemainingSec(0);
+        switch (phase) {
+          case 'coinFlip':
+            doCoinFlip();
+            break;
+          case 'roundIntro':
+            dispatch({ type: 'ROUND_INTRO_END' });
+            break;
+          case 'prepare':
+            dispatch({ type: 'PREPARE_END' });
+            break;
+          case 'reading':
+            stopReading();
+            break;
+          case 'roundResult':
+            setState((s) => {
+              let next = reduce(s, { type: 'NEXT_ROUND' });
+              const question = drawQuestion(pool, next.usedQuestionIds);
+              if (question) {
+                next = reduce(next, { type: 'QUESTION_DRAWN', question });
+                setCountdown(question);
+              }
+              return next;
+            });
+            break;
+        }
+      } else {
+        setRemainingSec(left);
+      }
+    }, 100);
+
+    return () => clearInterval(timer);
+    // question?.id 讓同回合換人朗讀時也會重新啟動計時器
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.phase, state.currentReader, state.question?.id, state.round]);
+
+  // 勝負音效
+  useEffect(() => {
+    if (state.phase !== 'matchResult') return;
+    if (state.winner === 'draw') sfxLose();
+    else sfxWin();
+  }, [state.phase, state.winner]);
 
   const rematch = useCallback(() => {
+    unlockAudio();
     setState((s) => reduce(s, { type: 'REMATCH' }));
   }, []);
 
   useEffect(() => {
     return () => {
-      clearTick();
       recognizer.current?.dispose();
     };
   }, []);
 
-  return {
-    state,
-    remainingSec,
-    totalSec,
-    interim,
-    error,
-    skipTrashTalk,
-    flipCoin,
-    startReading,
-    finishReading,
-    nextRound,
-    rematch,
-  };
+  return { state, remainingSec, totalSec, interim, error, rematch };
 }
 
 function mapSpeechError(err: string): string {
