@@ -11,10 +11,57 @@ interface ZhUnit {
   toneless: string; // 去聲調，如 "si"
 }
 
-// 只保留中日韓統一表意文字（去標點、空白、數字、英文）
+// 只保留中日韓統一表意文字（去標點、空白、英文）；數字已在前處理轉成中文字
 const CJK = /[一-鿿]/;
 
-function toUnits(text: string): ZhUnit[] {
+const ZH_DIGITS = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+const ZH_UNITS = ['', '十', '百', '千'];
+
+/** 整數（0–9999）轉中文口語讀法：44→四十四、14→十四、800→八百、104→一百零四。 */
+function intToChinese(n: number): string {
+  if (n === 0) return '零';
+  const str = String(n);
+  const len = str.length;
+  let s = '';
+  let zeroPending = false;
+  for (let i = 0; i < len; i++) {
+    const d = Number(str[i]);
+    const pos = len - 1 - i;
+    if (d === 0) {
+      zeroPending = true;
+    } else {
+      if (zeroPending) {
+        s += '零';
+        zeroPending = false;
+      }
+      s += ZH_DIGITS[d] + ZH_UNITS[pos];
+    }
+  }
+  // 「一十四」口語讀「十四」、「一十」讀「十」
+  if (s.startsWith('一十')) s = s.slice(1);
+  return s;
+}
+
+/**
+ * 語音辨識常把中文數字回傳成阿拉伯數字（「四十四」→「44」），
+ * 比對前先轉回中文字，否則會被當成非中文字濾掉而判錯。
+ */
+export function normalizeChineseNumbers(text: string): string {
+  return text.replace(/\d+/g, (run) => {
+    const n = Number(run);
+    if (run.length > 4 || !Number.isFinite(n)) {
+      // 超出範圍就逐位讀（少見；避免整段壞掉）
+      return run
+        .split('')
+        .map((d) => ZH_DIGITS[Number(d)] ?? d)
+        .join('');
+    }
+    return intToChinese(n);
+  });
+}
+
+function toUnits(rawText: string): ZhUnit[] {
+  const text = normalizeChineseNumbers(rawText);
   const units: ZhUnit[] = [];
   for (const char of Array.from(text)) {
     if (!CJK.test(char)) continue;

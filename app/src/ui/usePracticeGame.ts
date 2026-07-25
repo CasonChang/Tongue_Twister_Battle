@@ -18,6 +18,7 @@ export interface RoundResult {
   score: ScoreResult;
   damage: number;
   question: Question;
+  heard: string; // 玩家實際被辨識到的完整內容
 }
 
 export interface PracticeState {
@@ -81,7 +82,7 @@ export function usePracticeGame(settings: PracticeSettings) {
           s.totalSec,
         );
         const dummyHp = Math.max(0, s.dummyHp - damage);
-        const last: RoundResult = { score, damage, question: s.question };
+        const last: RoundResult = { score, damage, question: s.question, heard: transcript };
         return {
           ...s,
           phase: dummyHp <= 0 ? 'won' : 'result',

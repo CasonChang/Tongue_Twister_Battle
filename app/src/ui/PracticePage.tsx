@@ -174,9 +174,16 @@ function PracticeBattle({ settings, onExit }: { settings: PracticeSettings; onEx
             )}
           </div>
 
-          <span className="label">逐字比對</span>
+          <span className="label">逐字比對（題目原文上色）</span>
           <CharMarksView marks={state.last.score.charMarks} />
           <MarksLegend />
+
+          <div style={{ marginTop: 16 }}>
+            <span className="label">你唸的（辨識結果）</span>
+            <div className="interim has-text" style={{ textAlign: 'center' }}>
+              {state.last.heard?.trim() ? state.last.heard : '（沒有辨識到聲音）'}
+            </div>
+          </div>
 
           {state.phase === 'result' ? (
             <button className="btn big" style={{ marginTop: 16 }} onClick={game.nextQuestion}>

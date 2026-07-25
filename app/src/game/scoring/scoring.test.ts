@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scoreZh } from './accuracy-zh';
+import { scoreZh, normalizeChineseNumbers } from './accuracy-zh';
 import { scoreEn } from './accuracy-en';
 import { computeDamage } from './index';
 import type { ScoreResult } from '../types';
@@ -45,6 +45,31 @@ describe('scoreZh', () => {
     const r = scoreZh('石獅子', '');
     expect(r.accuracy).toBe(0);
     expect(r.charMarks).toHaveLength(3);
+  });
+
+  it('辨識回傳阿拉伯數字時仍能對上中文數字（44→四十四）', () => {
+    const r = scoreZh('四十四隻', '44隻');
+    expect(r.accuracy).toBe(1);
+    expect(r.charMarks.every((m) => m.mark === 'green')).toBe(true);
+  });
+});
+
+describe('normalizeChineseNumbers', () => {
+  it.each([
+    ['44', '四十四'],
+    ['14', '十四'],
+    ['10', '十'],
+    ['40', '四十'],
+    ['800', '八百'],
+    ['104', '一百零四'],
+    ['1000', '一千'],
+    ['4', '四'],
+  ])('%s → %s', (input, expected) => {
+    expect(normalizeChineseNumbers(input)).toBe(expected);
+  });
+
+  it('混在句子裡也能轉，非數字不動', () => {
+    expect(normalizeChineseNumbers('4是40是10')).toBe('四是四十是十');
   });
 });
 
