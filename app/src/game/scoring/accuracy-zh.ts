@@ -9,6 +9,18 @@ interface ZhUnit {
   char: string;
   py: string; // 含聲調數字，如 "si4"
   toneless: string; // 去聲調，如 "si"
+  fuzzy: string; // 近音正規化（併攏平翹舌、n/l、前後鼻音），如 "si"→"si"、"niang"→"lian"
+}
+
+// 近音正規化：反映常見口音（尤其台灣）的合併，讓「幾乎同音」的字拿半分而非直接判錯。
+// 聲母：zh/ch/sh→z/c/s（平翹舌不分）、n/r→l（n/l、r/l 不分）
+// 韻母：把結尾的 ng 併成 n（前後鼻音不分：ang→an、eng→en、ing→in…）
+function toFuzzy(toneless: string): string {
+  let s = toneless;
+  s = s.replace(/^zh/, 'z').replace(/^ch/, 'c').replace(/^sh/, 's');
+  s = s.replace(/^n/, 'l').replace(/^r/, 'l');
+  s = s.replace(/ng$/, 'n');
+  return s;
 }
 
 // 只保留中日韓統一表意文字（去標點、空白、英文）；數字已在前處理轉成中文字
@@ -67,15 +79,16 @@ function toUnits(rawText: string): ZhUnit[] {
     if (!CJK.test(char)) continue;
     const py = pinyin(char, { toneType: 'num', type: 'string', v: true }).replace(/\s+/g, '');
     const toneless = py.replace(/\d/g, '');
-    units.push({ char, py, toneless });
+    units.push({ char, py, toneless, fuzzy: toFuzzy(toneless) });
   }
   return units;
 }
 
-/** 對齊代價：拼音（含或不含聲調）相同視為可對齊。 */
+/** 對齊代價：越相近代價越低，確保相近的字會被對在一起而非拆成一刪一插。 */
 function subCost(t: ZhUnit, h: ZhUnit): number {
   if (t.py === h.py) return 0;
-  if (t.toneless === h.toneless) return 0.5; // 仍應對齊，但非完美
+  if (t.toneless === h.toneless) return 0.3; // 同音不同調
+  if (t.fuzzy === h.fuzzy) return 0.6; // 近音（平翹舌/n-l/前後鼻音）
   return 1;
 }
 
@@ -97,7 +110,8 @@ export function scoreZh(targetText: string, heardText: string): ScoreResult {
     if (p.heard && t.py === p.heard.py) {
       charMarks.push({ char: t.char, mark: 'green', heard: p.heard.char });
       score += 1;
-    } else if (p.heard && t.toneless === p.heard.toneless) {
+    } else if (p.heard && (t.toneless === p.heard.toneless || t.fuzzy === p.heard.fuzzy)) {
+      // 同音不同調，或近音（平翹舌/n-l/前後鼻音）→ 半分黃色
       charMarks.push({ char: t.char, mark: 'yellow', heard: p.heard.char });
       score += balance.toneWrongScore;
     } else {

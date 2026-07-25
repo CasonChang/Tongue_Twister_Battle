@@ -52,6 +52,22 @@ describe('scoreZh', () => {
     expect(r.accuracy).toBe(1);
     expect(r.charMarks.every((m) => m.mark === 'green')).toBe(true);
   });
+
+  it('近音字（n/l 不分、前後鼻音）給半分黃色，而非直接判灰', () => {
+    // 娘(niang) 被辨識成 量(liang)：n↔l、iang↔iang → 近音 → 黃
+    const r = scoreZh('牛郎戀劉娘', '牛郎練流量');
+    const last = r.charMarks[4];
+    expect(last.char).toBe('娘');
+    expect(last.mark).toBe('yellow');
+    // 戀↔練、劉↔流 為同音 → 綠
+    expect(r.charMarks.slice(0, 4).every((m) => m.mark === 'green')).toBe(true);
+    expect(r.accuracy).toBeCloseTo(4.5 / 5, 5);
+  });
+
+  it('完全不同音的字仍判灰', () => {
+    const r = scoreZh('天', '狗'); // tian vs gou，近音正規化後仍不同
+    expect(r.charMarks[0].mark).toBe('gray');
+  });
 });
 
 describe('normalizeChineseNumbers', () => {
@@ -95,6 +111,11 @@ describe('scoreEn', () => {
     const r = scoreEn('she sells sea shells', 'she sells');
     expect(r.charMarks.filter((m) => m.mark === 'gray').length).toBe(2);
     expect(r.accuracy).toBe(0.5);
+  });
+
+  it('辨識回傳阿拉伯數字時仍能對上英文數字（six↔6、thirty three↔33）', () => {
+    expect(scoreEn('Six sticky skeletons', '6 sticky skeletons').accuracy).toBe(1);
+    expect(scoreEn('thirty three thieves', '33 thieves').accuracy).toBe(1);
   });
 });
 

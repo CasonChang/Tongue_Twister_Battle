@@ -36,11 +36,40 @@ function homophoneSet(word: string): Set<string> | null {
   return null;
 }
 
+const ONES = [
+  'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+  'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen',
+  'seventeen', 'eighteen', 'nineteen',
+];
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+
+function under100(n: number): string {
+  if (n < 20) return ONES[n];
+  const t = TENS[Math.floor(n / 10)];
+  return n % 10 ? `${t} ${ONES[n % 10]}` : t;
+}
+function under1000(n: number): string {
+  if (n < 100) return under100(n);
+  const h = `${ONES[Math.floor(n / 100)]} hundred`;
+  return n % 100 ? `${h} ${under100(n % 100)}` : h;
+}
+/** 語音辨識常把英文數字回傳成阿拉伯數字（six→6），轉回英文單字再比對。 */
+function numberToWords(n: number): string {
+  if (n < 1000) return under1000(n);
+  const th = under1000(Math.floor(n / 1000));
+  const rem = n % 1000;
+  return rem ? `${th} thousand ${under1000(rem)}` : `${th} thousand`;
+}
+
 function normalize(text: string): string[] {
   let t = text.toLowerCase();
   for (const [k, v] of Object.entries(CONTRACTIONS)) t = t.split(k).join(v);
+  t = t.replace(/\d+/g, (run) => {
+    const n = Number(run);
+    return run.length > 4 || !Number.isFinite(n) ? ` ${run} ` : ` ${numberToWords(n)} `;
+  });
   return t
-    .replace(/[^a-z0-9\s']/g, ' ')
+    .replace(/[^a-z\s']/g, ' ')
     .split(/\s+/)
     .filter(Boolean);
 }
