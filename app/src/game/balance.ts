@@ -34,10 +34,11 @@ export const balance = {
 
   // 道具
   itemsPerPlayer: 3,
-  timeStealSec: 4, // ⏱️ 時間掠奪：對方倒數 -4
-  minCountdownSec: 5, // 倒數不會低於此
-  maskRatio: 0.25, // 🕳️ 文字遮蔽：遮 25% 的字
-  healAmount: 10, // 💚 回血貼布 +10
+  timeStealSec: 2, // ⏱️ 時間掠奪：對方作答時間 -2（作答時間砍半後，-4 太重）
+  minCountdownSec: 3, // 被掠奪後仍不低於此
+  maskRatio: 0.25, // 🕳️ 文字遮蔽：遮 25% 的字（只影響顯示）
+  // 🧛 吸血：本回合造成的傷害等量回復自己；血量上限仍是 playerHp，
+  //    但下限不設限（可為負數）——被打很慘時要吸更多才救得回來
 } as const;
 
 /** 難度數值 → UI 標籤 */

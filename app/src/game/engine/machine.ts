@@ -2,6 +2,7 @@
 // 計時由外層 driver 負責，時間到就投遞 TIME_UP 事件。
 // 這份邏輯之後連線對戰的伺服器會直接重用，是規則的唯一真相。
 import { balance } from '../balance';
+import { dealItems, ITEMS, type ItemId } from '../items';
 import type { Question, ScoreResult } from '../types';
 
 /**
@@ -22,7 +23,10 @@ export type Phase =
 
 export interface PlayerState {
   name: string;
+  /** 可為負數：被打很慘時要吸更多血才救得回來（docs/01 §4） */
   hp: number;
+  /** 手上剩餘的道具 */
+  items: ItemId[];
   /** 每次朗讀的紀錄，用於雙殺時的加權平均正確率 */
   reads: { accuracy: number; damage: number }[];
 }
@@ -46,13 +50,44 @@ export interface GameState {
   currentReader: 0 | 1 | null;
   /** 本回合雙方的結果，索引即玩家編號 */
   roundResolves: [ResolveResult | null, ResolveResult | null];
+  /** 本回合雙方選用的道具（開場階段選擇，回合結束清空） */
+  roundItems: [ItemId | null, ItemId | null];
   winner: 0 | 1 | 'draw' | null;
+}
+
+/** 某位玩家這回合朗讀時受到的道具效果（對手的攻擊型道具 + 自己的輔助型道具） */
+export interface ReaderEffects {
+  timeDeltaSec: number;
+  masked: boolean;
+  noise: boolean;
+  lifesteal: boolean;
+}
+
+export function effectsForReader(state: GameState, reader: 0 | 1): ReaderEffects {
+  const foe = reader === 0 ? 1 : 0;
+  const fromFoe = state.roundItems[foe];
+  const own = state.roundItems[reader];
+  const eff: ReaderEffects = { timeDeltaSec: 0, masked: false, noise: false, lifesteal: false };
+
+  // 對手選的攻擊型道具作用在我身上
+  if (fromFoe && ITEMS[fromFoe].target === 'opponent') {
+    if (fromFoe === 'timeSteal') eff.timeDeltaSec -= balance.timeStealSec;
+    if (fromFoe === 'noise') eff.noise = true;
+    if (fromFoe === 'mask') eff.masked = true;
+  }
+  // 自己選的輔助型道具作用在自己身上
+  if (own && ITEMS[own].target === 'self') {
+    if (own === 'lifesteal') eff.lifesteal = true;
+  }
+  return eff;
 }
 
 export type GameEvent =
   | { type: 'TRASH_TALK_END' }
   | { type: 'COIN_FLIPPED'; first: 0 | 1 }
   | { type: 'QUESTION_DRAWN'; question: Question }
+  /** 開場階段選道具；同一階段可改選，選同一個等於取消 */
+  | { type: 'ITEM_SELECTED'; player: 0 | 1; item: ItemId | null }
   | { type: 'ROUND_INTRO_END' }
   | { type: 'PREPARE_END' }
   | { type: 'READ_RESOLVED'; score: ScoreResult; damage: number; heard: string }
@@ -62,14 +97,16 @@ export type GameEvent =
 export interface CreateOptions {
   /** 單機雙人兩人就在旁邊，不需要嗆聲階段 */
   skipTrashTalk?: boolean;
+  random?: () => number;
 }
 
 export function createGame(nameA: string, nameB: string, opts: CreateOptions = {}): GameState {
+  const rng = opts.random ?? Math.random;
   return {
     phase: opts.skipTrashTalk ? 'coinFlip' : 'trashTalk',
     players: [
-      { name: nameA, hp: balance.playerHp, reads: [] },
-      { name: nameB, hp: balance.playerHp, reads: [] },
+      { name: nameA, hp: balance.playerHp, items: dealItems(balance.itemsPerPlayer, rng), reads: [] },
+      { name: nameB, hp: balance.playerHp, items: dealItems(balance.itemsPerPlayer, rng), reads: [] },
     ],
     firstAttacker: 0,
     round: 1,
@@ -77,6 +114,7 @@ export function createGame(nameA: string, nameB: string, opts: CreateOptions = {
     usedQuestionIds: [],
     currentReader: null,
     roundResolves: [null, null],
+    roundItems: [null, null],
     winner: null,
   };
 }
@@ -131,9 +169,30 @@ export function reduce(state: GameState, event: GameEvent): GameState {
         roundResolves: [null, null],
       };
 
-    case 'ROUND_INTRO_END':
+    case 'ITEM_SELECTED': {
       if (state.phase !== 'roundIntro') return state;
-      return { ...state, phase: 'prepare', currentReader: state.firstAttacker };
+      const { player, item } = event;
+      // 沒有這個道具就忽略；再點一次同一個等於取消
+      if (item !== null && !state.players[player].items.includes(item)) return state;
+      const roundItems = [...state.roundItems] as [ItemId | null, ItemId | null];
+      roundItems[player] = roundItems[player] === item ? null : item;
+      return { ...state, roundItems };
+    }
+
+    case 'ROUND_INTRO_END': {
+      if (state.phase !== 'roundIntro') return state;
+      // 開場結束才真正消耗道具（在此之前都能改選）
+      const players = state.players.map((p, i) => {
+        const used = state.roundItems[i];
+        if (!used) return p;
+        const idx = p.items.indexOf(used);
+        if (idx < 0) return p;
+        const items = [...p.items];
+        items.splice(idx, 1);
+        return { ...p, items };
+      }) as [PlayerState, PlayerState];
+      return { ...state, players, phase: 'prepare', currentReader: state.firstAttacker };
+    }
 
     case 'PREPARE_END':
       if (state.phase !== 'prepare') return state;
@@ -144,7 +203,9 @@ export function reduce(state: GameState, event: GameEvent): GameState {
       const reader = state.currentReader;
       const target = other(reader);
 
-      // 記錄這次朗讀，並對對手造成傷害
+      // 記錄這次朗讀，並對對手造成傷害。
+      // HP 不設下限（可為負）：被打很慘時要吸更多血才救得回來
+      const eff = effectsForReader(state, reader);
       const players = [...state.players] as [PlayerState, PlayerState];
       players[reader] = {
         ...players[reader],
@@ -152,8 +213,15 @@ export function reduce(state: GameState, event: GameEvent): GameState {
       };
       players[target] = {
         ...players[target],
-        hp: Math.max(0, players[target].hp - event.damage),
+        hp: players[target].hp - event.damage,
       };
+      // 🧛 吸血：造成多少傷害就回復多少（上限為滿血）
+      if (eff.lifesteal && event.damage > 0) {
+        players[reader] = {
+          ...players[reader],
+          hp: Math.min(balance.playerHp, players[reader].hp + event.damage),
+        };
+      }
 
       const resolves = [...state.roundResolves] as [ResolveResult | null, ResolveResult | null];
       resolves[reader] = {
@@ -200,6 +268,7 @@ export function reduce(state: GameState, event: GameEvent): GameState {
         question: null,
         currentReader: nextFirst,
         roundResolves: [null, null],
+        roundItems: [null, null],
         phase: 'roundIntro',
       };
     }

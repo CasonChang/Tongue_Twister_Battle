@@ -325,6 +325,221 @@ body {
   word-break: break-word;
 }
 
+/* ── PK 對戰版面：左右對峙 ───────────────────────────── */
+.app:has(.pk-header) {
+  max-width: 900px;
+}
+
+.pk-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.hp-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.hp-panel.right {
+  text-align: right;
+}
+.hp-panel.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(108, 140, 255, 0.35);
+}
+.hp-name {
+  font-weight: 700;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hp-panel.right .hpbar > span {
+  float: right;
+}
+.hp-num {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.hp-num.dead {
+  color: var(--red);
+  font-weight: 700;
+}
+
+.vs-badge {
+  text-align: center;
+  min-width: 54px;
+}
+.vs-badge .vs {
+  font-weight: 800;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+.vs-badge .round-no {
+  font-size: 0.8rem;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* 中央舞台 */
+.stage {
+  text-align: center;
+  min-height: 190px;
+}
+.stage-head {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  margin-bottom: 6px;
+}
+.stage-hint {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  margin-top: 8px;
+}
+.masked-char {
+  color: var(--gray);
+  letter-spacing: 2px;
+}
+
+/* 左右兩側的道具與成績 */
+.pk-sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.pk-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.item-bar {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+}
+.item-bar-title {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+.item-active {
+  display: block;
+  color: var(--accent);
+  font-weight: 700;
+  margin-top: 2px;
+}
+.items {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.item {
+  flex: 1 1 auto;
+  min-width: 62px;
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 4px;
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s ease;
+}
+.item:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.item:not(:disabled):hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+.item.chosen {
+  border-color: var(--accent);
+  background: rgba(108, 140, 255, 0.18);
+  box-shadow: 0 0 0 2px rgba(108, 140, 255, 0.35);
+}
+.item-emoji {
+  display: block;
+  font-size: 1.25rem;
+}
+.item-name {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.item-empty {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.side-result {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  flex: 1;
+}
+.side-result.empty {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  text-align: center;
+}
+.side-stat {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.side-stat .acc {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+.side-stat .dmg {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--red);
+}
+.side-result .marks {
+  font-size: 1.05rem;
+  line-height: 1.9rem;
+  letter-spacing: 1px;
+}
+
+.big-hp {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 6px 0 2px;
+}
+.big-hp.dead {
+  color: var(--red);
+}
+
+/* 窄螢幕：改成上下堆疊，但血條維持左右對峙 */
+@media (max-width: 640px) {
+  .pk-sides {
+    grid-template-columns: 1fr;
+  }
+  .hp-panel {
+    padding: 10px;
+  }
+  .item-name {
+    display: none;
+  }
+}
+
 .coin {
   font-size: 3rem;
   animation: flip 0.7s ease-in-out infinite;

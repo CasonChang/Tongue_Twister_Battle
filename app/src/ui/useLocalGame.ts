@@ -2,15 +2,25 @@
 // 對戰開始後全程自動推進，玩家不需按任何按鈕（docs/02 §3 GameDriver）。
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { balance } from '../game/balance';
-import { createGame, reduce, type GameEvent, type GameState } from '../game/engine/machine';
+import {
+  createGame,
+  effectsForReader,
+  reduce,
+  type GameEvent,
+  type GameState,
+} from '../game/engine/machine';
+import { pickMaskedIndices, type ItemId } from '../game/items';
 import { countdownForQuestion, drawQuestion, questionPool, type LangFilter } from '../game/questions';
 import { evaluateReadBest } from '../game/scoring';
 import type { Difficulty } from '../game/types';
 import { WebSpeechRecognizer } from '../speech/WebSpeechRecognizer';
 import type { SpeechFinalResult } from '../speech/SpeechRecognizer';
 import {
+  playInterference,
+  sfxDrain,
   sfxGo,
   sfxHit,
+  sfxItem,
   sfxLose,
   sfxPerfect,
   sfxRoundStart,
@@ -39,6 +49,10 @@ export function useLocalGame(settings: LocalGameSettings) {
   const [totalSec, setTotalSec] = useState(0);
   const [interim, setInterim] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  /** 本回合朗讀者被遮住的字（只影響顯示，不影響判定） */
+  const [maskedIndices, setMaskedIndices] = useState<number[]>([]);
+  const stopNoise = useRef<(() => void) | null>(null);
 
   const recognizer = useRef<WebSpeechRecognizer | null>(null);
   const startedAt = useRef(0);
@@ -85,6 +99,7 @@ export function useLocalGame(settings: LocalGameSettings) {
       );
       sfxHit(damage);
       if (score.isPerfect) sfxPerfect();
+      if (effectsForReader(s, s.currentReader!).lifesteal && damage > 0) sfxDrain();
       return reduce(s, {
         type: 'READ_RESOLVED',
         score,
@@ -98,6 +113,8 @@ export function useLocalGame(settings: LocalGameSettings) {
   const stopReading = useCallback(() => {
     if (resolving.current) return;
     resolving.current = true;
+    stopNoise.current?.();
+    stopNoise.current = null;
     const rec = recognizer.current;
     if (rec) {
       rec.onFinal((r) => applyResult(r));
@@ -108,13 +125,17 @@ export function useLocalGame(settings: LocalGameSettings) {
   }, [applyResult]);
 
   const beginReading = useCallback(
-    (lang: 'zh-TW' | 'en-US') => {
+    (lang: 'zh-TW' | 'en-US', noise: boolean, durSec: number) => {
       resolving.current = false;
       startedAt.current = Date.now();
       lastSpeechAt.current = 0;
       setInterim('');
       setError(null);
       sfxGo();
+
+      // 🔊 噪音干擾：只在受害者的裝置本地播放，不進入辨識（瀏覽器 AEC 會扣除）
+      stopNoise.current?.();
+      stopNoise.current = noise ? playInterference(durSec + 1) : null;
 
       const rec = new WebSpeechRecognizer();
       recognizer.current = rec;
@@ -137,19 +158,37 @@ export function useLocalGame(settings: LocalGameSettings) {
     const phase = state.phase;
     if (phase === 'matchResult') return;
 
+    // 朗讀者這回合受到的道具效果
+    const reader = state.currentReader;
+    const eff =
+      reader !== null
+        ? effectsForReader(state, reader)
+        : { timeDeltaSec: 0, masked: false, noise: false, lifesteal: false };
+
+    // ⏱️ 時間掠奪會縮短作答時間
+    const readSec = Math.max(balance.minCountdownSec, totalSecRef.current + eff.timeDeltaSec);
+
     // 各階段的持續秒數
     const durations: Partial<Record<GameState['phase'], number>> = {
       coinFlip: balance.coinFlipSec,
       roundIntro: balance.roundIntroSec,
       prepare: balance.prepareSec,
-      reading: totalSecRef.current,
+      reading: readSec,
       roundResult: balance.roundResultSec,
     };
     const dur = durations[phase];
     if (!dur) return;
 
     if (phase === 'roundIntro') sfxRoundStart();
-    if (phase === 'reading' && state.question) beginReading(state.question.lang);
+    // 🕳️ 文字遮蔽：進入看題時決定遮哪些字，整個回合固定
+    if (phase === 'prepare' && state.question) {
+      setMaskedIndices(
+        eff.masked ? pickMaskedIndices(state.question.text.length, balance.maskRatio) : [],
+      );
+    }
+    if (phase === 'reading' && state.question) {
+      beginReading(state.question.lang, eff.noise, readSec);
+    }
 
     const start = Date.now();
     setRemainingSec(dur);
@@ -213,13 +252,32 @@ export function useLocalGame(settings: LocalGameSettings) {
     setState((s) => reduce(s, { type: 'REMATCH' }));
   }, []);
 
+  /** 開場階段點選道具（單機雙人：兩人當場用滑鼠各自點） */
+  const selectItem = useCallback(
+    (player: 0 | 1, item: ItemId) => {
+      sfxItem();
+      dispatch({ type: 'ITEM_SELECTED', player, item });
+    },
+    [dispatch],
+  );
+
   useEffect(() => {
     return () => {
       recognizer.current?.dispose();
+      stopNoise.current?.();
     };
   }, []);
 
-  return { state, remainingSec, totalSec, interim, error, rematch };
+  return {
+    state,
+    remainingSec,
+    totalSec,
+    interim,
+    error,
+    maskedIndices,
+    rematch,
+    selectItem,
+  };
 }
 
 function mapSpeechError(err: string): string {

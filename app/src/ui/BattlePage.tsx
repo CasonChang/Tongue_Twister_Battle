@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { difficultyLabel } from '../game/balance';
+import { balance, difficultyLabel } from '../game/balance';
 import type { Difficulty } from '../game/types';
 import type { LangFilter } from '../game/questions';
+import { ITEMS, type ItemId } from '../game/items';
 import { useLocalGame, type LocalGameSettings } from './useLocalGame';
 import { CharMarksView, MarksLegend } from './CharMarksView';
 import type { GameState, ResolveResult } from '../game/engine/machine';
@@ -13,6 +14,8 @@ const LANGS: { key: LangFilter; label: string }[] = [
   { key: 'en', label: '英文' },
   { key: 'both', label: '混合' },
 ];
+
+const other = (i: 0 | 1): 0 | 1 => (i === 0 ? 1 : 0);
 
 export function BattlePage({ onExit }: { onExit: () => void }) {
   const [settings, setSettings] = useState<LocalGameSettings | null>(null);
@@ -88,7 +91,8 @@ function BattleSetup({
         </div>
       </div>
       <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-        對戰開始後全程自動進行：看題 3 秒 → 依題目時間作答 → 換人 → 結算，不需要按任何按鈕。
+        對戰開始後全程自動進行。每回合開場有 {balance.roundIntroSec} 秒可以點選道具，
+        這時題目已經公開，可以看題再決定要用什麼。
       </p>
       <button
         className="btn big"
@@ -103,31 +107,109 @@ function BattleSetup({
   );
 }
 
-function HpBars({ state }: { state: GameState }) {
+/** 左右兩側的血量面板 */
+function HpPanel({
+  state,
+  side,
+}: {
+  state: GameState;
+  side: 0 | 1;
+}) {
+  const p = state.players[side];
+  const pct = Math.max(0, Math.min(100, (p.hp / balance.playerHp) * 100));
+  const isReading = state.currentReader === side && state.phase === 'reading';
   return (
-    <div className="card">
-      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 4 }}>
-        <span className="label" style={{ margin: 0 }}>
-          第 {state.round} 回合
-        </span>
-        <span className="label" style={{ margin: 0 }}>
-          先攻：{state.players[state.firstAttacker].name}
-        </span>
+    <div className={`hp-panel ${side === 0 ? 'left' : 'right'} ${isReading ? 'active' : ''}`}>
+      <div className="hp-name">
+        {isReading && <span className="mic-dot" />}
+        {p.name}
+        {state.firstAttacker === side && <span className="tag">先</span>}
       </div>
-      {state.players.map((p, i) => (
-        <div key={i} style={{ marginTop: 10 }}>
-          <div className="row" style={{ justifyContent: 'space-between', fontSize: '0.9rem' }}>
-            <span>
-              {state.currentReader === i && '🎤 '}
-              {p.name}
-              {state.firstAttacker === i && <span className="tag">先</span>}
-            </span>
-            <span style={{ color: 'var(--text-dim)' }}>{p.hp} HP</span>
-          </div>
-          <div className="hpbar" style={{ marginTop: 4 }}>
-            <span style={{ width: `${p.hp}%` }} />
-          </div>
-        </div>
+      <div className="hpbar">
+        <span style={{ width: `${pct}%` }} />
+      </div>
+      <div className={`hp-num ${p.hp <= 0 ? 'dead' : ''}`}>{p.hp} HP</div>
+    </div>
+  );
+}
+
+/** 一側玩家的道具列；開場階段可點選 */
+function ItemBar({
+  state,
+  side,
+  selectable,
+  onSelect,
+}: {
+  state: GameState;
+  side: 0 | 1;
+  selectable: boolean;
+  onSelect: (player: 0 | 1, item: ItemId) => void;
+}) {
+  const p = state.players[side];
+  const chosen = state.roundItems[side];
+  const usedThisRound = state.phase !== 'roundIntro' && chosen;
+
+  return (
+    <div className="item-bar">
+      <div className="item-bar-title">
+        {p.name} 的道具
+        {usedThisRound && (
+          <span className="item-active">
+            {ITEMS[chosen].emoji} {ITEMS[chosen].name} 發動中
+          </span>
+        )}
+      </div>
+      <div className="items">
+        {p.items.length === 0 && <span className="item-empty">（已用完）</span>}
+        {p.items.map((id, idx) => {
+          const def = ITEMS[id];
+          // 手上可能有兩個同款道具，只讓第一個亮起來，避免看起來像選了兩個
+          const isChosen =
+            state.phase === 'roundIntro' && chosen === id && p.items.indexOf(id) === idx;
+          return (
+            <button
+              key={`${id}-${idx}`}
+              className={`item ${isChosen ? 'chosen' : ''}`}
+              disabled={!selectable}
+              title={`${def.name}：${def.desc}`}
+              onClick={() => onSelect(side, id)}
+            >
+              <span className="item-emoji">{def.emoji}</span>
+              <span className="item-name">{def.name}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** 一側玩家本回合的成績 */
+function SideResult({ resolve }: { resolve: ResolveResult | null }) {
+  if (!resolve) return <div className="side-result empty">尚未作答</div>;
+  return (
+    <div className="side-result">
+      <div className="side-stat">
+        <span className="acc">{Math.round(resolve.score.accuracy * 100)}%</span>
+        <span className="dmg">-{resolve.damage}</span>
+        {resolve.score.isPerfect && <span className="tag perfect">PERFECT</span>}
+      </div>
+      <CharMarksView marks={resolve.score.charMarks} />
+      <div className="heard-line">{resolve.heard || '（沒有辨識到聲音）'}</div>
+    </div>
+  );
+}
+
+/** 題目文字，可依道具遮字 */
+function QuestionText({ text, masked }: { text: string; masked: number[] }) {
+  if (masked.length === 0) return <div className="question-text">{text}</div>;
+  const set = new Set(masked);
+  return (
+    <div className="question-text">
+      {Array.from(text).map((ch, i) => (
+        <span key={i} className={set.has(i) ? 'masked-char' : ''}>
+          {set.has(i) ? '▓' : ch}
+        </span>
       ))}
     </div>
   );
@@ -137,6 +219,11 @@ function Battle({ settings, onExit }: { settings: LocalGameSettings; onExit: () 
   const game = useLocalGame(settings);
   const { state } = game;
   const meta = difficultyLabel(settings.difficulty);
+  const isItemPhase = state.phase === 'roundIntro';
+
+  if (state.phase === 'matchResult') {
+    return <MatchResult state={state} onRematch={game.rematch} onExit={onExit} />;
+  }
 
   return (
     <>
@@ -144,197 +231,145 @@ function Battle({ settings, onExit }: { settings: LocalGameSettings; onExit: () 
         ← 重新設定
       </button>
 
-      {state.phase !== 'matchResult' && <HpBars state={state} />}
+      {/* 上方：左右血條 */}
+      <div className="pk-header">
+        <HpPanel state={state} side={0} />
+        <div className="vs-badge">
+          <div className="vs">VS</div>
+          <div className="round-no">R{state.round}</div>
+        </div>
+        <HpPanel state={state} side={1} />
+      </div>
+
       {game.error && <div className="error">{game.error}</div>}
 
-      {state.phase === 'coinFlip' && (
-        <div className="card" style={{ textAlign: 'center' }}>
-          <div className="coin">🪙</div>
-          <h2 style={{ margin: '8px 0' }}>決定先後攻…</h2>
-          <p style={{ color: 'var(--text-dim)' }}>
-            {settings.nameA} vs {settings.nameB}（{meta.label}）
-          </p>
-        </div>
-      )}
+      {/* 中間：舞台 */}
+      <div className="card stage">
+        {state.phase === 'coinFlip' && (
+          <>
+            <div className="coin">🪙</div>
+            <h2 style={{ margin: '8px 0' }}>決定先後攻…</h2>
+            <p style={{ color: 'var(--text-dim)' }}>難度：{meta.label}</p>
+          </>
+        )}
 
-      {state.phase === 'roundIntro' && state.currentReader !== null && (
-        <div className="card" style={{ textAlign: 'center' }}>
-          <div className="label">第 {state.round} 回合</div>
-          <h2 style={{ margin: '10px 0', fontSize: '1.6rem' }}>
-            ⚔️ <b>{state.players[state.firstAttacker].name}</b> 先攻
-          </h2>
-          <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>準備一下，即將開始</p>
-          <div className={`countdown ${game.remainingSec <= 3 ? 'low' : ''}`}>
-            {Math.ceil(game.remainingSec)}
-          </div>
-        </div>
-      )}
+        {isItemPhase && state.question && (
+          <>
+            <div className="stage-head">
+              第 {state.round} 回合 · ⚔️ <b>{state.players[state.firstAttacker].name}</b> 先攻
+            </div>
+            <QuestionText text={state.question.text} masked={[]} />
+            <div className={`countdown ${game.remainingSec <= 3 ? 'low' : ''}`}>
+              {Math.ceil(game.remainingSec)}
+            </div>
+            <div className="stage-hint">看題選道具──兩人各自點自己那側（不選也可以）</div>
+          </>
+        )}
 
-      {state.phase === 'prepare' && state.question && state.currentReader !== null && (
-        <>
-          {/* 先攻已唸完時，這裡順帶公布他的成績（一講完就扣血了） */}
-          {state.roundResolves[other(state.currentReader)] && (
-            <ResolveCard
-              name={state.players[other(state.currentReader)].name}
-              resolve={state.roundResolves[other(state.currentReader)]!}
-              compact
-            />
-          )}
-          <div className="card">
-            <div className="pass-device">
+        {state.phase === 'prepare' && state.question && state.currentReader !== null && (
+          <>
+            <div className="stage-head">
               👉 換 <b>{state.players[state.currentReader].name}</b> 唸
               {state.roundResolves[other(state.currentReader)] && '（同一題）'}
             </div>
-            <div className="question-text">{state.question.text}</div>
+            <QuestionText text={state.question.text} masked={game.maskedIndices} />
             <div className="prepare-count">{Math.ceil(game.remainingSec)}</div>
-            <div style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-              看題中…作答 {game.totalSec} 秒
+            <div className="stage-hint">看題中…</div>
+          </>
+        )}
+
+        {state.phase === 'reading' && state.question && state.currentReader !== null && (
+          <>
+            <div className={`countdown ${game.remainingSec <= 3 ? 'low' : ''}`}>
+              {game.remainingSec.toFixed(1)}s
             </div>
-          </div>
-        </>
-      )}
+            <div className="timer-ring">
+              <span
+                style={{ width: `${Math.max(0, (game.remainingSec / game.totalSec) * 100)}%` }}
+              />
+            </div>
+            <QuestionText text={state.question.text} masked={game.maskedIndices} />
+            <div className={`interim ${game.interim ? 'has-text' : ''}`}>
+              <span className="mic-dot" />
+              {game.interim || '（開始唸…）'}
+            </div>
+            <div className="stage-hint">
+              {state.players[state.currentReader].name} 朗讀中──另一位請保持安靜
+            </div>
+          </>
+        )}
 
-      {state.phase === 'reading' && state.question && state.currentReader !== null && (
-        <div className="card">
-          <div className={`countdown ${game.remainingSec <= 3 ? 'low' : ''}`}>
-            {game.remainingSec.toFixed(1)}s
-          </div>
-          <div className="timer-ring">
-            <span style={{ width: `${(game.remainingSec / game.totalSec) * 100}%` }} />
-          </div>
-          <div style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-            {state.players[state.currentReader].name} 朗讀中──另一位請保持安靜
-          </div>
-          <div className="question-text">{state.question.text}</div>
-          <div className={`interim ${game.interim ? 'has-text' : ''}`}>
-            <span className="mic-dot" />
-            {game.interim || '（開始唸…）'}
-          </div>
+        {state.phase === 'roundResult' && (
+          <>
+            <div className="stage-head">第 {state.round} 回合結束</div>
+            <div className="stage-hint">{Math.ceil(game.remainingSec)} 秒後續戰</div>
+            <MarksLegend />
+          </>
+        )}
+      </div>
+
+      {/* 下方：左右各自的道具與成績 */}
+      <div className="pk-sides">
+        <div className="pk-side">
+          <ItemBar state={state} side={0} selectable={isItemPhase} onSelect={game.selectItem} />
+          <SideResult resolve={state.roundResolves[0]} />
         </div>
-      )}
-
-      {(state.phase === 'roundResult' || state.phase === 'matchResult') && (
-        <RoundOrMatchResult
-          state={state}
-          remainingSec={game.remainingSec}
-          onRematch={game.rematch}
-          onExit={onExit}
-        />
-      )}
+        <div className="pk-side">
+          <ItemBar state={state} side={1} selectable={isItemPhase} onSelect={game.selectItem} />
+          <SideResult resolve={state.roundResolves[1]} />
+        </div>
+      </div>
     </>
   );
 }
 
-const other = (i: 0 | 1): 0 | 1 => (i === 0 ? 1 : 0);
-
-/** 單人的成績卡：正確率、傷害、逐字三色、辨識內容 */
-function ResolveCard({
-  name,
-  resolve,
-  compact,
-}: {
-  name: string;
-  resolve: ResolveResult;
-  compact?: boolean;
-}) {
-  return (
-    <div className={`card ${compact ? 'resolve-flash' : ''}`}>
-      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-        <b>{compact ? `${name} 的成績` : name}</b>
-        <span>
-          <span style={{ color: 'var(--accent)' }}>{Math.round(resolve.score.accuracy * 100)}%</span>
-          {'　'}
-          <span style={{ color: 'var(--red)' }}>-{resolve.damage}</span>
-          {resolve.score.isPerfect && <span className="tag perfect">PERFECT</span>}
-        </span>
-      </div>
-      <CharMarksView marks={resolve.score.charMarks} />
-      <div className="heard-line">你唸的：{resolve.heard || '（沒有辨識到聲音）'}</div>
-    </div>
-  );
-}
-
-function RoundOrMatchResult({
+function MatchResult({
   state,
-  remainingSec,
   onRematch,
   onExit,
 }: {
   state: GameState;
-  remainingSec: number;
   onRematch: () => void;
   onExit: () => void;
 }) {
-  const isMatch = state.phase === 'matchResult';
-
   return (
     <>
-      {isMatch && (
-        <div className="card" style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '3rem' }}>{state.winner === 'draw' ? '🤝' : '🏆'}</div>
-          <h2 style={{ margin: '8px 0' }}>
-            {state.winner === 'draw'
-              ? '平手！'
-              : `${state.players[state.winner as 0 | 1].name} 獲勝！`}
-          </h2>
-          <p style={{ color: 'var(--text-dim)' }}>
-            共 {state.round} 回合
-            {state.winner === 'draw' && ' · 雙方同時倒下，正確率也不相上下'}
-          </p>
-          <div className="row" style={{ justifyContent: 'space-around', marginTop: 12 }}>
-            {state.players.map((p, i) => (
-              <div className="stat" key={i}>
-                <div className="big">{p.hp}</div>
-                <div className="cap">{p.name} 剩餘 HP</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="card">
-        <div className="row" style={{ justifyContent: 'space-between' }}>
-          <span className="label" style={{ margin: 0 }}>
-            {isMatch ? '最後一回合' : `第 ${state.round} 回合結果`}
-          </span>
-          {!isMatch && (
-            <span className="label" style={{ margin: 0 }}>
-              {Math.ceil(remainingSec)} 秒後續戰
-            </span>
-          )}
-        </div>
-        {state.roundResolves.map((r, i) =>
-          r ? (
-            <div key={i} className="resolve-block">
-              <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                <b>{state.players[i].name}</b>
-                <span>
-                  <span style={{ color: 'var(--accent)' }}>
-                    {Math.round(r.score.accuracy * 100)}%
-                  </span>
-                  {'　'}
-                  <span style={{ color: 'var(--red)' }}>-{r.damage}</span>
-                  {r.score.isPerfect && <span className="tag perfect">PERFECT</span>}
-                </span>
-              </div>
-              <CharMarksView marks={r.score.charMarks} />
-              <div className="heard-line">你唸的：{r.heard || '（沒有辨識到聲音）'}</div>
-            </div>
-          ) : null,
-        )}
-        <MarksLegend />
+      <div className="card" style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '3rem' }}>{state.winner === 'draw' ? '🤝' : '🏆'}</div>
+        <h2 style={{ margin: '8px 0' }}>
+          {state.winner === 'draw' ? '平手！' : `${state.players[state.winner as 0 | 1].name} 獲勝！`}
+        </h2>
+        <p style={{ color: 'var(--text-dim)' }}>
+          共 {state.round} 回合
+          {state.winner === 'draw' && ' · 雙方同時倒下，正確率也不相上下'}
+        </p>
       </div>
 
-      {isMatch && (
-        <div>
-          <button className="btn big" onClick={onRematch}>
-            🔄 再來一局
-          </button>
-          <button className="btn big secondary" style={{ marginTop: 10 }} onClick={onExit}>
-            離開
-          </button>
-        </div>
-      )}
+      <div className="pk-sides">
+        {[0, 1].map((i) => {
+          const p = state.players[i as 0 | 1];
+          const avg = p.reads.length
+            ? p.reads.reduce((s, r) => s + r.accuracy, 0) / p.reads.length
+            : 0;
+          return (
+            <div className="pk-side" key={i}>
+              <div className="card" style={{ textAlign: 'center', margin: 0 }}>
+                <b>{p.name}</b>
+                <div className={`big-hp ${p.hp <= 0 ? 'dead' : ''}`}>{p.hp} HP</div>
+                <div className="cap">平均正確率 {Math.round(avg * 100)}%</div>
+              </div>
+              <SideResult resolve={state.roundResolves[i as 0 | 1]} />
+            </div>
+          );
+        })}
+      </div>
+
+      <button className="btn big" onClick={onRematch}>
+        🔄 再來一局
+      </button>
+      <button className="btn big secondary" style={{ marginTop: 10 }} onClick={onExit}>
+        離開
+      </button>
     </>
   );
 }
