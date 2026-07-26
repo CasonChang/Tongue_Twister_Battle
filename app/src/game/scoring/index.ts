@@ -59,18 +59,34 @@ export function scoreBestCandidate(lang: Lang, target: string, chunks: string[][
   return { ...result, heard: bestText, usedAlternative: bestText !== topOne };
 }
 
+/** 傷害的組成，讓玩家看得懂「為什麼同樣 100% 傷害卻不同」 */
+export interface DamageBreakdown {
+  base: number;
+  timeBonus: number;
+  perfect: number;
+  total: number;
+}
+
 /**
  * 傷害公式（docs/01 §3.2）：
  *   damage = round(base * acc^2) + round(timeBonusMax * timeFrac * acc) + perfectBonus
  * timeFrac = 剩餘秒數 / 總倒數秒數（提早念完的比例）。
  */
-export function computeDamage(score: ScoreResult, remainingSec: number, totalSec: number): number {
+export function damageBreakdown(
+  score: ScoreResult,
+  remainingSec: number,
+  totalSec: number,
+): DamageBreakdown {
   const acc = score.accuracy;
   const timeFrac = totalSec > 0 ? Math.max(0, Math.min(1, remainingSec / totalSec)) : 0;
   const base = Math.round(balance.baseDamage * acc * acc);
   const timeBonus = Math.round(balance.timeBonusMax * timeFrac * acc);
   const perfect = score.isPerfect ? balance.perfectBonus : 0;
-  return base + timeBonus + perfect;
+  return { base, timeBonus, perfect, total: base + timeBonus + perfect };
+}
+
+export function computeDamage(score: ScoreResult, remainingSec: number, totalSec: number): number {
+  return damageBreakdown(score, remainingSec, totalSec).total;
 }
 
 /** 由一次 SpeechResult 直接算出分數與傷害。 */
@@ -93,9 +109,9 @@ export function evaluateReadBest(
   chunks: string[][],
   elapsedSec: number,
   totalSec: number,
-): { score: BestScore; damage: number } {
+): { score: BestScore; damage: number; breakdown: DamageBreakdown } {
   const score = scoreBestCandidate(lang, target, chunks);
   const remaining = Math.max(0, totalSec - elapsedSec);
-  const damage = computeDamage(score, remaining, totalSec);
-  return { score, damage };
+  const breakdown = damageBreakdown(score, remaining, totalSec);
+  return { score, damage: breakdown.total, breakdown };
 }

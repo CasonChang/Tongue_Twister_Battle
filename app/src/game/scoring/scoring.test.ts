@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { scoreZh, normalizeChineseNumbers } from './accuracy-zh';
 import { scoreEn } from './accuracy-en';
-import { computeDamage, buildCandidates, scoreBestCandidate } from './index';
+import { computeDamage, damageBreakdown, buildCandidates, scoreBestCandidate } from './index';
 import type { ScoreResult } from '../types';
 
 describe('scoreZh', () => {
@@ -119,6 +119,58 @@ describe('scoreEn', () => {
   });
 });
 
+describe('多唸字扣分（紅鳳凰 → 粉紅鳳凰）', () => {
+  it('中文：多唸一個字要扣分，並列出多唸的內容', () => {
+    const r = scoreZh('紅鳳凰', '粉紅鳳凰');
+    expect(r.extras).toEqual(['粉']);
+    // 三個字全對 = 3.0，多唸一字扣 0.5 → 2.5/3
+    expect(r.accuracy).toBeCloseTo(2.5 / 3, 5);
+    expect(r.isPerfect).toBe(false); // 不再是滿分
+    // 原文三個字仍然是綠的（確實唸對了）
+    expect(r.charMarks.every((m) => m.mark === 'green')).toBe(true);
+  });
+
+  it('中文：整句唸兩遍會被大幅扣分', () => {
+    const r = scoreZh('紅鳳凰', '紅鳳凰紅鳳凰');
+    expect(r.extras).toHaveLength(3);
+    expect(r.accuracy).toBeCloseTo((3 - 1.5) / 3, 5); // 剩一半
+  });
+
+  it('英文：多唸一個詞要扣分', () => {
+    const r = scoreEn('sea shells', 'the sea shells');
+    expect(r.extras).toEqual(['the']);
+    expect(r.accuracy).toBeCloseTo((2 - 0.5) / 2, 5);
+  });
+
+  it('沒有多唸時 extras 為空且不影響分數', () => {
+    const r = scoreZh('紅鳳凰', '紅鳳凰');
+    expect(r.extras).toEqual([]);
+    expect(r.accuracy).toBe(1);
+    expect(r.isPerfect).toBe(true);
+  });
+
+  it('扣分不會讓正確率變成負數', () => {
+    const r = scoreZh('紅', '天氣真好今天出太陽');
+    expect(r.accuracy).toBe(0);
+  });
+});
+
+describe('傷害組成（解釋同樣 100% 為何傷害不同）', () => {
+  it('差別在時間加成：早唸完的人多拿分', () => {
+    const perfect: ScoreResult = { accuracy: 1, charMarks: [], isPerfect: true, extras: [] };
+    const slow = damageBreakdown(perfect, 0.2, 10); // 幾乎用滿時間
+    const fast = damageBreakdown(perfect, 3, 10); // 提早唸完
+    expect(slow.base).toBe(20);
+    expect(slow.perfect).toBe(5);
+    expect(slow.timeBonus).toBe(0);
+    expect(slow.total).toBe(25);
+    expect(fast.timeBonus).toBe(2);
+    expect(fast.total).toBe(27);
+    // 兩者都是 100%，差別只在時間加成
+    expect(fast.total - slow.total).toBe(fast.timeBonus - slow.timeBonus);
+  });
+});
+
 describe('N-best 候選（方案 A：撈回被語言模型腦補掉的正確答案）', () => {
   it('buildCandidates 組出所有片段組合', () => {
     expect(buildCandidates([['a', 'b'], ['x', 'y']]).sort()).toEqual(['ax', 'ay', 'bx', 'by']);
@@ -164,9 +216,9 @@ describe('N-best 候選（方案 A：撈回被語言模型腦補掉的正確答�
 });
 
 describe('computeDamage', () => {
-  const perfect: ScoreResult = { accuracy: 1, charMarks: [], isPerfect: true };
-  const half: ScoreResult = { accuracy: 0.5, charMarks: [], isPerfect: false };
-  const zero: ScoreResult = { accuracy: 0, charMarks: [], isPerfect: false };
+  const perfect: ScoreResult = { accuracy: 1, charMarks: [], isPerfect: true, extras: [] };
+  const half: ScoreResult = { accuracy: 0.5, charMarks: [], isPerfect: false, extras: [] };
+  const zero: ScoreResult = { accuracy: 0, charMarks: [], isPerfect: false, extras: [] };
 
   it('滿分且準時念完 → base 20 + timeBonus + perfect 5', () => {
     // 剩 5 秒 / 總 15 秒 → timeFrac=1/3, timeBonus=round(5*1/3*1)=2

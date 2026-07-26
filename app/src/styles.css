@@ -325,6 +325,30 @@ body {
   word-break: break-word;
 }
 
+/* 傷害組成說明 */
+.dmg-breakdown {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin: -4px 0 10px;
+}
+.dmg-breakdown .bonus {
+  color: var(--green);
+}
+
+/* 多唸出來的字 */
+.extras-line {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #ff9d5c;
+  word-break: break-word;
+}
+.extras-penalty {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+}
+
 /* ── PK 對戰版面：左右對峙 ───────────────────────────── */
 .app:has(.pk-header) {
   max-width: 900px;

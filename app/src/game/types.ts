@@ -32,6 +32,8 @@ export interface ScoreResult {
   accuracy: number; // 0..1
   charMarks: CharMark[];
   isPerfect: boolean; // accuracy >= perfectThreshold
+  /** 多唸出來、題目裡沒有的字／詞（例：紅鳳凰唸成「粉」紅鳳凰）。每個都會扣分 */
+  extras: string[];
 }
 
 /** 語音辨識器回傳給遊戲的最終結果 */

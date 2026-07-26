@@ -97,15 +97,20 @@ export function scoreZh(targetText: string, heardText: string): ScoreResult {
   const heards = toUnits(heardText);
 
   if (targets.length === 0) {
-    return { accuracy: 0, charMarks: [], isPerfect: false };
+    return { accuracy: 0, charMarks: [], isPerfect: false, extras: [] };
   }
 
   const pairs = align(targets, heards, subCost);
   const charMarks: CharMark[] = [];
+  const extras: string[] = [];
   let score = 0;
 
   for (const p of pairs) {
-    if (!p.target) continue; // 多念的字不列入 target 分數
+    if (!p.target) {
+      // 題目裡沒有、卻唸出來的字（例：紅鳳凰唸成「粉」紅鳳凰）
+      if (p.heard) extras.push(p.heard.char);
+      continue;
+    }
     const t = p.target;
     if (p.heard && t.py === p.heard.py) {
       charMarks.push({ char: t.char, mark: 'green', heard: p.heard.char });
@@ -119,6 +124,8 @@ export function scoreZh(targetText: string, heardText: string): ScoreResult {
     }
   }
 
-  const accuracy = score / targets.length;
-  return { accuracy, charMarks, isPerfect: accuracy >= balance.perfectThreshold };
+  // 多唸的字要扣分，否則「紅鳳凰」唸成「粉紅鳳凰」會拿到滿分
+  const penalty = extras.length * balance.insertionPenalty;
+  const accuracy = Math.max(0, (score - penalty) / targets.length);
+  return { accuracy, charMarks, isPerfect: accuracy >= balance.perfectThreshold, extras };
 }

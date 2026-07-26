@@ -28,6 +28,8 @@ export const balance = {
 
   // 正確率三色門檻
   toneWrongScore: 0.5, // 黃：字對音錯
+  /** 每多唸一個題目裡沒有的字，扣多少分（以「一個字」為 1.0 計） */
+  insertionPenalty: 0.5,
 
   // 雙殺加權判定：全場加權平均正確率差距 < 此值視為平手（docs/01 §3.2）
   drawThreshold: 0.02,

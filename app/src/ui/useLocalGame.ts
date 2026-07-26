@@ -90,7 +90,7 @@ export function useLocalGame(settings: LocalGameSettings) {
       const endedAt = lastSpeechAt.current || Date.now();
       const elapsedSec = Math.max(0, (endedAt - startedAt.current) / 1000);
       const chunks = result.chunks.length > 0 ? result.chunks : [[result.transcript]];
-      const { score, damage } = evaluateReadBest(
+      const { score, damage, breakdown } = evaluateReadBest(
         s.question.lang,
         s.question.text,
         chunks,
@@ -105,6 +105,7 @@ export function useLocalGame(settings: LocalGameSettings) {
         score,
         damage,
         heard: score.heard || result.transcript,
+        breakdown,
       });
     });
     setInterim('');

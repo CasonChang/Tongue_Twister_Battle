@@ -86,15 +86,20 @@ export function scoreEn(targetText: string, heardText: string): ScoreResult {
   const heards = normalize(heardText);
 
   if (targets.length === 0) {
-    return { accuracy: 0, charMarks: [], isPerfect: false };
+    return { accuracy: 0, charMarks: [], isPerfect: false, extras: [] };
   }
 
   const pairs = align(targets, heards, subCost);
   const charMarks: CharMark[] = [];
+  const extras: string[] = [];
   let score = 0;
 
   for (const p of pairs) {
-    if (p.target === undefined) continue;
+    if (p.target === undefined) {
+      // 題目裡沒有、卻唸出來的詞
+      if (p.heard !== undefined) extras.push(p.heard);
+      continue;
+    }
     const t = p.target;
     if (p.heard !== undefined && t === p.heard) {
       charMarks.push({ char: t, mark: 'green', heard: p.heard });
@@ -107,6 +112,8 @@ export function scoreEn(targetText: string, heardText: string): ScoreResult {
     }
   }
 
-  const accuracy = score / targets.length;
-  return { accuracy, charMarks, isPerfect: accuracy >= balance.perfectThreshold };
+  // 多唸的詞要扣分
+  const penalty = extras.length * balance.insertionPenalty;
+  const accuracy = Math.max(0, (score - penalty) / targets.length);
+  return { accuracy, charMarks, isPerfect: accuracy >= balance.perfectThreshold, extras };
 }

@@ -36,6 +36,8 @@ export interface ResolveResult {
   score: ScoreResult;
   damage: number;
   heard: string;
+  /** 傷害的組成（基礎／時間加成／完美加成），供畫面說明用 */
+  breakdown?: { base: number; timeBonus: number; perfect: number };
 }
 
 export interface GameState {
@@ -90,7 +92,13 @@ export type GameEvent =
   | { type: 'ITEM_SELECTED'; player: 0 | 1; item: ItemId | null }
   | { type: 'ROUND_INTRO_END' }
   | { type: 'PREPARE_END' }
-  | { type: 'READ_RESOLVED'; score: ScoreResult; damage: number; heard: string }
+  | {
+      type: 'READ_RESOLVED';
+      score: ScoreResult;
+      damage: number;
+      heard: string;
+      breakdown?: { base: number; timeBonus: number; perfect: number };
+    }
   | { type: 'NEXT_ROUND' }
   | { type: 'REMATCH' };
 
@@ -227,6 +235,7 @@ export function reduce(state: GameState, event: GameEvent): GameState {
         score: event.score,
         damage: event.damage,
         heard: event.heard,
+        breakdown: event.breakdown,
       };
 
       const secondAttacker = other(state.firstAttacker);

@@ -23,6 +23,7 @@ const score = (accuracy: number): ScoreResult => ({
   accuracy,
   charMarks: [],
   isPerfect: accuracy >= 0.95,
+  extras: [],
 });
 
 /** 走完「出題 → 開場 → 兩人各唸一次」的流程 */

@@ -223,7 +223,35 @@ function SideResult({ resolve }: { resolve: ResolveResult | null }) {
         </div>
         {resolve.score.isPerfect && <span className="tag perfect">PERFECT</span>}
       </div>
+
+      {/* 傷害怎麼算出來的——解釋同樣 100% 為何傷害不同 */}
+      {resolve.breakdown && (
+        <div className="dmg-breakdown">
+          基礎 {resolve.breakdown.base}
+          {resolve.breakdown.timeBonus > 0 && (
+            <>
+              {' + '}
+              <span className="bonus">早唸完 {resolve.breakdown.timeBonus}</span>
+            </>
+          )}
+          {resolve.breakdown.perfect > 0 && (
+            <>
+              {' + '}
+              <span className="bonus">完美 {resolve.breakdown.perfect}</span>
+            </>
+          )}
+        </div>
+      )}
+
       <CharMarksView marks={resolve.score.charMarks} />
+      {resolve.score.extras.length > 0 && (
+        <div className="extras-line">
+          多唸了：{resolve.score.extras.join('、')}
+          <span className="extras-penalty">
+            （每字扣 {balance.insertionPenalty} 分）
+          </span>
+        </div>
+      )}
       <div className="heard-line">{resolve.heard || '（沒有辨識到聲音）'}</div>
     </div>
   );

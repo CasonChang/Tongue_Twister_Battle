@@ -176,6 +176,11 @@ function PracticeBattle({ settings, onExit }: { settings: PracticeSettings; onEx
 
           <span className="label">逐字比對（題目原文上色）</span>
           <CharMarksView marks={state.last.score.charMarks} />
+          {state.last.score.extras.length > 0 && (
+            <div className="extras-line">
+              多唸了：{state.last.score.extras.join('、')}
+            </div>
+          )}
           <MarksLegend />
 
           <div style={{ marginTop: 16 }}>
