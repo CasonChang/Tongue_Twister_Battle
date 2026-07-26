@@ -556,10 +556,22 @@ body {
 }
 .side-stat {
   display: flex;
-  gap: 10px;
-  align-items: center;
+  gap: 18px;
+  align-items: flex-start;
   justify-content: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.stat-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.2;
+}
+.stat-cap {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-top: 2px;
 }
 .side-stat .acc {
   font-size: 1.5rem;
@@ -567,9 +579,91 @@ body {
   color: var(--accent);
 }
 .side-stat .dmg {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ff9d5c;
+}
+
+/* 漂浮的傷害／回血數字 */
+.hp-panel {
+  position: relative;
+  overflow: visible;
+}
+.float-num {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.6rem;
+  font-weight: 800;
+  pointer-events: none;
+  z-index: 30;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+  animation: float-up 1.4s ease-out forwards;
+}
+.float-num.dmg {
+  color: #ff5a5a;
+}
+.float-num.heal {
+  color: var(--green);
+}
+@keyframes float-up {
+  0% { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.7); }
+  15% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.25); }
+  35% { transform: translateX(-50%) translateY(-6px) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-46px) scale(1); }
+}
+
+.hp-panel.shake {
+  animation: hp-shake 0.45s ease;
+}
+@keyframes hp-shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-7px); }
+  30% { transform: translateX(7px); }
+  45% { transform: translateX(-5px); }
+  60% { transform: translateX(5px); }
+  80% { transform: translateX(-2px); }
+}
+
+/* 勝負判定說明 */
+.explain {
+  background: var(--bg-card);
+  border: 1px solid var(--accent);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.explain-title {
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.explain p {
+  margin: 8px 0;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--text-dim);
+}
+.explain b {
+  color: var(--text);
+}
+.explain-compare {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 12px 0;
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--red);
+}
+.explain-compare .win {
+  color: var(--green);
+}
+.explain-compare .vs-mini {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-weight: 400;
 }
 .side-result .marks {
   font-size: 1.05rem;

@@ -203,28 +203,18 @@ function setVowel(chain: VoiceChain, vowel: string, t: number, glideSec = 0.06):
 
 type Interference = 'babble' | 'singing' | 'laugh';
 
-/**
- * 播放干擾人聲。durSec 為最長播放秒數；回傳可提前停止的函式。
- * 每次隨機挑一種：碎念、唱歌、大笑。
- */
-export function playInterference(durSec: number): () => void {
-  const c = getCtx();
-  if (!c || muted) return () => {};
-
-  const kinds: Interference[] = ['babble', 'singing', 'laugh'];
-  const kind = kinds[Math.floor(Math.random() * kinds.length)];
-
-  const master = c.createGain();
-  master.gain.value = 0.5;
-  master.connect(c.destination);
-
-  const t0 = c.currentTime + 0.05;
-  const tEnd = t0 + durSec;
-  const baseFreq = kind === 'singing' ? 196 : 132; // 唱歌音高較高
+/** 排一條聲部的音節時序 */
+function scheduleVoice(
+  c: AudioContext,
+  master: GainNode,
+  kind: Interference,
+  t0: number,
+  tEnd: number,
+  baseFreq: number,
+): VoiceChain {
   const chain = createVoiceChain(c, master, baseFreq);
   chain.osc.start(t0);
   chain.vibrato.start(t0);
-
   const g = chain.env.gain;
   g.setValueAtTime(0, t0);
 
@@ -275,6 +265,41 @@ export function playInterference(durSec: number): () => void {
   }
 
   chain.stop(tEnd + 0.3);
+  return chain;
+}
+
+/**
+ * 播放干擾人聲。durSec 為最長播放秒數；回傳可提前停止的函式。
+ *
+ * 單一人聲還不夠煩──真正讓人無法專心的是「雞尾酒會效應」：
+ * 好幾個人同時在講話，大腦會不停想去解析每一路人聲。
+ * 所以這裡疊 3 條獨立聲部（不同音高、不同節奏、不同種類）。
+ */
+export function playInterference(durSec: number): () => void {
+  const c = getCtx();
+  if (!c || muted) return () => {};
+
+  const master = c.createGain();
+  master.gain.value = 1.1; // 單聲部時代是 0.5，多聲部後整體再拉高
+  master.connect(c.destination);
+
+  const t0 = c.currentTime + 0.05;
+  const tEnd = t0 + durSec;
+
+  // 一定有人在碎念（最干擾），另外兩條隨機
+  const pool: Interference[] = ['babble', 'singing', 'laugh'];
+  const kinds: Interference[] = [
+    'babble',
+    pool[Math.floor(Math.random() * pool.length)],
+    pool[Math.floor(Math.random() * pool.length)],
+  ];
+  // 不同音高才像不同人：男聲、女聲、中間
+  const freqs = [116, 208, 158];
+
+  const chains = kinds.map((kind, i) =>
+    // 錯開起始時間，避免三個人同時開口的機械感
+    scheduleVoice(c, master, kind, t0 + i * (0.15 + Math.random() * 0.3), tEnd, freqs[i]),
+  );
 
   return () => {
     const now = c.currentTime;
@@ -283,7 +308,7 @@ export function playInterference(durSec: number): () => void {
       master.gain.cancelScheduledValues(now);
       master.gain.setValueAtTime(master.gain.value, now);
       master.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
-      chain.stop(now + 0.12);
+      chains.forEach((ch) => ch.stop(now + 0.12));
     } catch {
       /* ignore */
     }

@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { balance, difficultyLabel } from '../game/balance';
 import type { Difficulty } from '../game/types';
 import type { LangFilter } from '../game/questions';
 import { ITEMS, type ItemId } from '../game/items';
 import { useLocalGame, type LocalGameSettings } from './useLocalGame';
 import { CharMarksView, MarksLegend } from './CharMarksView';
-import type { GameState, ResolveResult } from '../game/engine/machine';
+import { effectsForReader, weightedAccuracy, type GameState, type ResolveResult } from '../game/engine/machine';
 import { unlockAudio } from '../audio/sfx';
 
 const DIFFICULTIES: Difficulty[] = [1, 2, 3, 4];
@@ -107,19 +107,41 @@ function BattleSetup({
   );
 }
 
+interface FloatText {
+  id: number;
+  side: 0 | 1;
+  text: string;
+  kind: 'dmg' | 'heal';
+}
+
 /** 左右兩側的血量面板 */
 function HpPanel({
   state,
   side,
+  floats,
 }: {
   state: GameState;
   side: 0 | 1;
+  floats: FloatText[];
 }) {
   const p = state.players[side];
   const pct = Math.max(0, Math.min(100, (p.hp / balance.playerHp) * 100));
   const isReading = state.currentReader === side && state.phase === 'reading';
+  const hit = floats.some((f) => f.side === side && f.kind === 'dmg');
   return (
-    <div className={`hp-panel ${side === 0 ? 'left' : 'right'} ${isReading ? 'active' : ''}`}>
+    <div
+      className={`hp-panel ${side === 0 ? 'left' : 'right'} ${isReading ? 'active' : ''} ${
+        hit ? 'shake' : ''
+      }`}
+    >
+      {/* 漂浮的傷害／回血數字 */}
+      {floats
+        .filter((f) => f.side === side)
+        .map((f) => (
+          <span key={f.id} className={`float-num ${f.kind}`}>
+            {f.text}
+          </span>
+        ))}
       <div className="hp-name">
         {isReading && <span className="mic-dot" />}
         {p.name}
@@ -190,8 +212,15 @@ function SideResult({ resolve }: { resolve: ResolveResult | null }) {
   return (
     <div className="side-result">
       <div className="side-stat">
-        <span className="acc">{Math.round(resolve.score.accuracy * 100)}%</span>
-        <span className="dmg">-{resolve.damage}</span>
+        <div className="stat-cell">
+          <span className="acc">{Math.round(resolve.score.accuracy * 100)}%</span>
+          <span className="stat-cap">正確率</span>
+        </div>
+        <div className="stat-cell">
+          {/* 標明是「打出去的傷害」，不是自己被扣血 */}
+          <span className="dmg">⚔ {resolve.damage}</span>
+          <span className="stat-cap">造成傷害</span>
+        </div>
         {resolve.score.isPerfect && <span className="tag perfect">PERFECT</span>}
       </div>
       <CharMarksView marks={resolve.score.charMarks} />
@@ -221,6 +250,36 @@ function Battle({ settings, onExit }: { settings: LocalGameSettings; onExit: () 
   const meta = difficultyLabel(settings.difficulty);
   const isItemPhase = state.phase === 'roundIntro';
 
+  // 有人被扣血時，在他的血條上跳出漂浮數字
+  const [floats, setFloats] = useState<FloatText[]>([]);
+  const seenResolves = useRef(new Set<string>());
+  useEffect(() => {
+    state.roundResolves.forEach((r, i) => {
+      if (!r) return;
+      const key = `${state.round}-${i}`;
+      if (seenResolves.current.has(key)) return;
+      seenResolves.current.add(key);
+
+      const reader = i as 0 | 1;
+      const target = other(reader);
+      const added: FloatText[] = [
+        { id: Date.now() + reader, side: target, text: `-${r.damage} HP`, kind: 'dmg' },
+      ];
+      // 🧛 吸血：施術者同時回血
+      if (effectsForReader(state, reader).lifesteal && r.damage > 0) {
+        added.push({
+          id: Date.now() + 100 + reader,
+          side: reader,
+          text: `+${r.damage} HP`,
+          kind: 'heal',
+        });
+      }
+      setFloats((f) => [...f, ...added]);
+      const ids = added.map((a) => a.id);
+      setTimeout(() => setFloats((f) => f.filter((x) => !ids.includes(x.id))), 1400);
+    });
+  }, [state.roundResolves, state.round, state]);
+
   if (state.phase === 'matchResult') {
     return <MatchResult state={state} onRematch={game.rematch} onExit={onExit} />;
   }
@@ -233,12 +292,12 @@ function Battle({ settings, onExit }: { settings: LocalGameSettings; onExit: () 
 
       {/* 上方：左右血條 */}
       <div className="pk-header">
-        <HpPanel state={state} side={0} />
+        <HpPanel state={state} side={0} floats={floats} />
         <div className="vs-badge">
           <div className="vs">VS</div>
           <div className="round-no">R{state.round}</div>
         </div>
-        <HpPanel state={state} side={1} />
+        <HpPanel state={state} side={1} floats={floats} />
       </div>
 
       {game.error && <div className="error">{game.error}</div>}
@@ -323,6 +382,58 @@ function Battle({ settings, onExit }: { settings: LocalGameSettings; onExit: () 
   );
 }
 
+/** 說明這一局是怎麼判出勝負的（雙殺時尤其需要解釋） */
+function WinExplain({ state }: { state: GameState }) {
+  const [a, b] = state.players;
+  const aDead = a.hp <= 0;
+  const bDead = b.hp <= 0;
+  const accA = weightedAccuracy(a);
+  const accB = weightedAccuracy(b);
+  const pct = (x: number) => `${Math.round(x * 100)}%`;
+
+  // 一般 KO：只有一方倒下
+  if (!(aDead && bDead)) {
+    const loser = aDead ? a : b;
+    const winner = aDead ? b : a;
+    return (
+      <div className="explain">
+        <div className="explain-title">判定方式：血量歸零</div>
+        <p>
+          <b>{loser.name}</b> 的血量降到 {loser.hp} HP（0 以下）， 由 <b>{winner.name}</b> 獲勝。
+        </p>
+      </div>
+    );
+  }
+
+  // 雙殺：兩人同回合都被打到 0 以下
+  const isDraw = state.winner === 'draw';
+  const winnerName = isDraw ? null : state.players[state.winner as 0 | 1].name;
+  return (
+    <div className="explain">
+      <div className="explain-title">判定方式：雙殺 → 比全場加權平均正確率</div>
+      <p>
+        這一回合<b>兩人同時被打到 0 以下</b>（{a.name} {a.hp} HP、{b.name} {b.hp} HP）。
+        血量多寡此時不影響勝負，改比<b>全場加權平均正確率</b>
+        ——每次朗讀的正確率以「該次造成的傷害」為權重平均，所以關鍵回合唸得好比較有份量。
+      </p>
+      <div className="explain-compare">
+        <span className={state.winner === 0 ? 'win' : ''}>
+          {a.name} {pct(accA)}
+        </span>
+        <span className="vs-mini">vs</span>
+        <span className={state.winner === 1 ? 'win' : ''}>
+          {b.name} {pct(accB)}
+        </span>
+      </div>
+      <p>
+        {isDraw
+          ? `兩者差距在 ${Math.round(balance.drawThreshold * 100)}% 以內，視為平手。`
+          : `${winnerName} 較高，由 ${winnerName} 獲勝。`}
+      </p>
+    </div>
+  );
+}
+
 function MatchResult({
   state,
   onRematch,
@@ -339,24 +450,24 @@ function MatchResult({
         <h2 style={{ margin: '8px 0' }}>
           {state.winner === 'draw' ? '平手！' : `${state.players[state.winner as 0 | 1].name} 獲勝！`}
         </h2>
-        <p style={{ color: 'var(--text-dim)' }}>
-          共 {state.round} 回合
-          {state.winner === 'draw' && ' · 雙方同時倒下，正確率也不相上下'}
-        </p>
+        <p style={{ color: 'var(--text-dim)' }}>共 {state.round} 回合</p>
       </div>
+
+      <WinExplain state={state} />
 
       <div className="pk-sides">
         {[0, 1].map((i) => {
           const p = state.players[i as 0 | 1];
-          const avg = p.reads.length
-            ? p.reads.reduce((s, r) => s + r.accuracy, 0) / p.reads.length
-            : 0;
+          const wAvg = weightedAccuracy(p);
+          const best = p.reads.reduce((m, r) => Math.max(m, r.damage), 0);
           return (
             <div className="pk-side" key={i}>
               <div className="card" style={{ textAlign: 'center', margin: 0 }}>
                 <b>{p.name}</b>
                 <div className={`big-hp ${p.hp <= 0 ? 'dead' : ''}`}>{p.hp} HP</div>
-                <div className="cap">平均正確率 {Math.round(avg * 100)}%</div>
+                {/* 顯示的就是判定用的加權平均，避免和勝負依據不一致 */}
+                <div className="cap">加權平均正確率 {Math.round(wAvg * 100)}%</div>
+                <div className="cap">最高單次傷害 {best}</div>
               </div>
               <SideResult resolve={state.roundResolves[i as 0 | 1]} />
             </div>
