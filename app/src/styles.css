@@ -325,6 +325,66 @@ body {
   word-break: break-word;
 }
 
+/* 計分說明頁 */
+.help h2 {
+  margin: 0 0 12px;
+}
+.help h3 {
+  margin: 22px 0 8px;
+  font-size: 1rem;
+  color: var(--accent);
+}
+.help p,
+.help li {
+  font-size: 0.9rem;
+  line-height: 1.75;
+  color: var(--text-dim);
+}
+.help b {
+  color: var(--text);
+}
+.help ul {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+.help .formula {
+  background: var(--bg-card-2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 0.88rem;
+  text-align: center;
+}
+.help-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 0.88rem;
+}
+.help-table td {
+  padding: 8px 6px;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  vertical-align: top;
+  line-height: 1.6;
+}
+.help-table tr:first-child td {
+  border-top: none;
+}
+.help-table td:first-child {
+  white-space: nowrap;
+  color: var(--text);
+  font-weight: 600;
+}
+.help-table .score {
+  text-align: right;
+  white-space: nowrap;
+  color: var(--text);
+}
+.nowrap {
+  white-space: nowrap;
+}
+
 /* 傷害組成說明 */
 .dmg-breakdown {
   text-align: center;

@@ -4,9 +4,11 @@ import { isWebSpeechSupported } from '../speech/SpeechRecognizer';
 export function HomePage({
   onStartPractice,
   onStartBattle,
+  onOpenHelp,
 }: {
   onStartPractice: () => void;
   onStartBattle: () => void;
+  onOpenHelp: () => void;
 }) {
   const [micState, setMicState] = useState<'idle' | 'ok' | 'denied'>('idle');
   const supported = isWebSpeechSupported();
@@ -70,6 +72,10 @@ export function HomePage({
           </button>
         </div>
       </div>
+
+      <button className="btn big secondary" onClick={onOpenHelp}>
+        📖 計分說明
+      </button>
     </>
   );
 }

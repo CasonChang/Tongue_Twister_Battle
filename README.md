@@ -2,7 +2,12 @@
 
 一個雙人對戰的網頁遊戲：兩位玩家輪流唸繞口令，系統用語音辨識計算正確率並換算成傷害，先把對方血量打到 0 的人獲勝。支援單機（同一台裝置輪流）與連線對戰，需要麥克風才能遊玩。
 
-> **目前狀態：Phase 1 進行中。** 已可玩的 **木人樁練習**（一個人就能測辨識與計分）在 `app/`，可直接部署到 GitHub Pages。單機兩人對戰與連線對戰依 `docs/03-implementation-plan.md` 續做。
+> **目前狀態**
+> - ✅ **木人樁練習**（一個人就能玩）
+> - ✅ **單機雙人對戰**：嗆聲免、擲先攻 → 每回合開場選道具 → 輪流唸同一題 → 全自動推進
+> - ✅ 三色判分、道具系統（含吸血與可負血量）、音效
+> - ⏭️ **下一步：連線對戰**（需要伺服器，見 [docs/05-online-sop.md](docs/05-online-sop.md)）
+> - ⏭️ 節奏模式
 
 ## 快速開始
 
@@ -30,9 +35,13 @@ npm test         # 計分邏輯單元測試
 
 | 文件 | 內容 |
 |------|------|
-| [docs/01-game-design.md](docs/01-game-design.md) | 遊戲規則：對戰流程、計分與傷害公式、嗆聲階段、道具、節奏模式、題庫規格 |
-| [docs/02-architecture.md](docs/02-architecture.md) | 技術架構：技術棧、Monorepo 結構、遊戲狀態機、語音辨識抽象層、連線協定（Socket.IO 事件）、WebRTC 語音、麥克風控制、風險與對策 |
-| [docs/03-implementation-plan.md](docs/03-implementation-plan.md) | 分階段實作計畫（Phase 0–5）、每階段的驗收條件、待業主確認的決定清單 |
+| **[docs/04-scoring.md](docs/04-scoring.md)** | **判分方法（目前實作的權威說明）**：三色標記、近音規則、多唸扣分、正確率與傷害公式、勝負判定、道具、已知限制 |
+| **[docs/05-online-sop.md](docs/05-online-sop.md)** | **連線對戰上線 SOP**：Zeabur 部署步驟、你我分工、需要先決定的事 |
+| [docs/01-game-design.md](docs/01-game-design.md) | 最初的遊戲設計構想與決策理由（部分細節已隨實測調整，判分以 04 為準） |
+| [docs/02-architecture.md](docs/02-architecture.md) | 技術架構：技術棧、狀態機、語音辨識抽象層、連線協定（Socket.IO 事件）、WebRTC 語音、麥克風控制、風險與對策 |
+| [docs/03-implementation-plan.md](docs/03-implementation-plan.md) | 分階段實作計畫與驗收條件 |
+
+> 遊戲內也有一份給玩家看的**「📖 計分說明」**，在首頁最下方。
 
 ## 核心決定摘要（細節與理由見各文件）
 
