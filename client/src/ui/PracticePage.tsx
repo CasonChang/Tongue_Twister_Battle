@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { difficultyLabel } from '../game/balance';
-import type { Difficulty } from '../game/types';
-import type { LangFilter } from '../game/questions';
+import { difficultyLabel } from '@shared/balance';
+import type { Difficulty } from '@shared/types';
+import type { LangFilter } from '@shared/questions';
 import { usePracticeGame, type PracticeSettings } from './usePracticeGame';
 import { CharMarksView, MarksLegend } from './CharMarksView';
 

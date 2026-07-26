@@ -1,6 +1,6 @@
 // Web Speech API 實作（docs/02 §5）。
 // 注意：Chrome 的 Web Speech 在雲端辨識，需要網路；離線不可用。
-import type { Lang } from '../game/types';
+import type { Lang } from '@shared/types';
 import type { SpeechFinalResult, SpeechRecognizer } from './SpeechRecognizer';
 
 /** 每段要幾個候選。Web Speech 通常回傳 1–5 個，多要不花成本。 */

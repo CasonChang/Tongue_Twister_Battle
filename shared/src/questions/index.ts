@@ -1,5 +1,5 @@
-import { balance } from '../balance';
-import type { Difficulty, Question } from '../types';
+import { balance } from '@shared/balance';
+import type { Difficulty, Question } from '@shared/types';
 import zhData from './zh.json';
 import enData from './en.json';
 

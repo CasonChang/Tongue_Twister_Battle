@@ -1,6 +1,6 @@
 // 站內計分說明（玩家看的版本）。完整技術規格見 docs/04-scoring.md。
-import { balance } from '../game/balance';
-import { ITEMS, ALL_ITEM_IDS } from '../game/items';
+import { balance } from '@shared/balance';
+import { ITEMS, ALL_ITEM_IDS } from '@shared/items';
 
 export function HelpPage({ onExit }: { onExit: () => void }) {
   const pct = (x: number) => `${Math.round(x * 100)}%`;

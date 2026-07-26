@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { scoreZh, normalizeChineseNumbers } from './accuracy-zh';
 import { scoreEn } from './accuracy-en';
 import { computeDamage, damageBreakdown, buildCandidates, scoreBestCandidate } from './index';
-import type { ScoreResult } from '../types';
+import type { ScoreResult } from '@shared/types';
 
 describe('scoreZh', () => {
   it('完全念對 → 全綠、accuracy=1、perfect', () => {

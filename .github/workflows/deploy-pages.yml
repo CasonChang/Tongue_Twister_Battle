@@ -21,26 +21,26 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: app
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: app/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npm test
       - name: Build
         # base 設成 /<repo>/，讓資源在 https://<user>.github.io/<repo>/ 下正確載入
-        run: npm run build
+        run: npm run build:client
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
+          # 連線對戰的伺服器位址（Zeabur）。沒設時連線對戰維持停用，
+          # 單機模式不受影響。
+          VITE_SERVER_URL: ${{ vars.VITE_SERVER_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: app/dist
+          path: client/dist
 
   deploy:
     needs: build

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { balance, difficultyLabel } from '../game/balance';
-import type { Difficulty } from '../game/types';
-import type { LangFilter } from '../game/questions';
-import { ITEMS, type ItemId } from '../game/items';
+import { balance, difficultyLabel } from '@shared/balance';
+import type { Difficulty } from '@shared/types';
+import type { LangFilter } from '@shared/questions';
+import { ITEMS, type ItemId } from '@shared/items';
 import { useLocalGame, type LocalGameSettings } from './useLocalGame';
 import { CharMarksView, MarksLegend } from './CharMarksView';
-import { effectsForReader, weightedAccuracy, type GameState, type ResolveResult } from '../game/engine/machine';
+import { effectsForReader, weightedAccuracy, type GameState, type ResolveResult } from '@shared/engine/machine';
 import { unlockAudio } from '../audio/sfx';
 
 const DIFFICULTIES: Difficulty[] = [1, 2, 3, 4];

@@ -1,18 +1,18 @@
 // 單機雙人（hot-seat）驅動層：把計時器、語音辨識、音效接到純函式引擎上。
 // 對戰開始後全程自動推進，玩家不需按任何按鈕（docs/02 §3 GameDriver）。
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { balance } from '../game/balance';
+import { balance } from '@shared/balance';
 import {
   createGame,
   effectsForReader,
   reduce,
   type GameEvent,
   type GameState,
-} from '../game/engine/machine';
-import { pickMaskedIndices, type ItemId } from '../game/items';
-import { countdownForQuestion, drawQuestion, questionPool, type LangFilter } from '../game/questions';
-import { evaluateReadBest } from '../game/scoring';
-import type { Difficulty } from '../game/types';
+} from '@shared/engine/machine';
+import { pickMaskedIndices, type ItemId } from '@shared/items';
+import { countdownForQuestion, drawQuestion, questionPool, type LangFilter } from '@shared/questions';
+import { evaluateReadBest } from '@shared/scoring';
+import type { Difficulty } from '@shared/types';
 import { WebSpeechRecognizer } from '../speech/WebSpeechRecognizer';
 import type { SpeechFinalResult } from '../speech/SpeechRecognizer';
 import {

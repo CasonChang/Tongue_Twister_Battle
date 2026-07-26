@@ -1,9 +1,9 @@
 // 遊戲狀態機（docs/02 §4）。純函式 reducer：無副作用、無計時器。
 // 計時由外層 driver 負責，時間到就投遞 TIME_UP 事件。
 // 這份邏輯之後連線對戰的伺服器會直接重用，是規則的唯一真相。
-import { balance } from '../balance';
-import { dealStartingItems, ITEMS, type ItemId } from '../items';
-import type { Question, ScoreResult } from '../types';
+import { balance } from '@shared/balance';
+import { dealStartingItems, ITEMS, type ItemId } from '@shared/items';
+import type { Question, ScoreResult } from '@shared/types';
 
 /**
  * 對戰全程自動推進，玩家不需要按任何按鈕（單機雙人）。

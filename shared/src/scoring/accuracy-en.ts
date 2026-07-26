@@ -1,7 +1,7 @@
 // 英文題計分：以「詞」為單位對齊，逐詞給三色（docs/01 §3.1）。
 // 綠＝正規化後完全相同；黃＝常見同音誤辨；灰＝其他/漏念。
-import { balance } from '../balance';
-import type { CharMark, ScoreResult } from '../types';
+import { balance } from '@shared/balance';
+import type { CharMark, ScoreResult } from '@shared/types';
 import { align } from './align';
 
 // 常見縮寫展開（辨識結果常把 they're 拆成 they are 之類，反之亦然）

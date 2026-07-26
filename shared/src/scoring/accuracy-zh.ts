@@ -1,8 +1,8 @@
 // 中文題計分：先轉拼音再對齊，逐字給三色（docs/01 §3.1）。
 // 綠＝拼音含聲調全同；黃＝拼音相同但聲調錯；灰＝其他/漏念。
 import { pinyin } from 'pinyin-pro';
-import { balance } from '../balance';
-import type { CharMark, ScoreResult } from '../types';
+import { balance } from '@shared/balance';
+import type { CharMark, ScoreResult } from '@shared/types';
 import { align } from './align';
 
 interface ZhUnit {

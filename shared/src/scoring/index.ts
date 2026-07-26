@@ -1,5 +1,5 @@
-import type { Lang, ScoreResult, SpeechResult } from '../types';
-import { balance } from '../balance';
+import type { Lang, ScoreResult, SpeechResult } from '@shared/types';
+import { balance } from '@shared/balance';
 import { scoreZh } from './accuracy-zh';
 import { scoreEn } from './accuracy-en';
 

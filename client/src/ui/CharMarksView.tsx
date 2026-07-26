@@ -1,4 +1,4 @@
-import type { CharMark } from '../game/types';
+import type { CharMark } from '@shared/types';
 
 /** 逐字三色顯示（docs/01 §3.1）：綠＝字對音對、黃＝字對音錯、灰＝全錯。 */
 export function CharMarksView({ marks }: { marks: CharMark[] }) {

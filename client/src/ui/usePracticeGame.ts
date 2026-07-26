@@ -1,10 +1,10 @@
 // 木人樁練習的遊戲控制（docs/03 Phase 1）。
 // 一個人就能玩：抽題 → 倒數朗讀 → 三色計分 → 對木人樁造成傷害 → 打倒過關。
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { balance, difficultyLabel } from '../game/balance';
-import type { Difficulty, Question, ScoreResult } from '../game/types';
-import { countdownForQuestion, drawQuestion, questionPool, type LangFilter } from '../game/questions';
-import { evaluateReadBest } from '../game/scoring';
+import { balance, difficultyLabel } from '@shared/balance';
+import type { Difficulty, Question, ScoreResult } from '@shared/types';
+import { countdownForQuestion, drawQuestion, questionPool, type LangFilter } from '@shared/questions';
+import { evaluateReadBest } from '@shared/scoring';
 import { WebSpeechRecognizer } from '../speech/WebSpeechRecognizer';
 import type { SpeechFinalResult } from '../speech/SpeechRecognizer';
 

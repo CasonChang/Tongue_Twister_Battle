@@ -1,6 +1,6 @@
 // 語音辨識抽象層（docs/02 §5）。
 // 遊戲邏輯只認識這個介面；第一版用 Web Speech，之後可換雲端 STT 而不動遊戲。
-import type { Lang } from '../game/types';
+import type { Lang } from '@shared/types';
 
 /**
  * 最終辨識結果。

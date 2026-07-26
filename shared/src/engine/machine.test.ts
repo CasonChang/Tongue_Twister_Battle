@@ -7,8 +7,8 @@ import {
   type GameEvent,
   type GameState,
 } from './machine';
-import { balance } from '../balance';
-import type { Question, ScoreResult } from '../types';
+import { balance } from '@shared/balance';
+import type { Question, ScoreResult } from '@shared/types';
 
 const q = (id: string): Question => ({
   id,
