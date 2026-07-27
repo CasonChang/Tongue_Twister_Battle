@@ -325,6 +325,82 @@ body {
   word-break: break-word;
 }
 
+/* 連線對戰：大廳與等待室 */
+.room-code {
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: 8px;
+  color: var(--accent);
+  margin: 10px 0 14px;
+  font-family: 'SF Mono', 'Consolas', monospace;
+}
+.room-input {
+  text-align: center;
+  letter-spacing: 6px;
+  font-size: 1.3rem;
+  font-family: 'SF Mono', 'Consolas', monospace;
+}
+.seat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.95rem;
+}
+.seat:first-of-type {
+  border-top: none;
+}
+.ready-yes {
+  color: var(--green);
+  font-size: 0.85rem;
+}
+.ready-no {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+.tag.you {
+  background: var(--green);
+}
+.voice-chip-row {
+  margin-top: 10px;
+}
+.voice-chip {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.voice-chip.connected {
+  color: var(--green);
+  border-color: var(--green);
+}
+.voice-chip.failed,
+.voice-chip.denied {
+  color: #ffb27a;
+  border-color: #ffb27a;
+}
+.online-banner {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.room-code-mini {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
 /* 計分說明頁 */
 .help h2 {
   margin: 0 0 12px;

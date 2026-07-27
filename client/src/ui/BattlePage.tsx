@@ -119,10 +119,12 @@ function HpPanel({
   state,
   side,
   floats,
+  mySide = null,
 }: {
   state: GameState;
   side: 0 | 1;
   floats: FloatText[];
+  mySide?: 0 | 1 | null;
 }) {
   const p = state.players[side];
   const pct = Math.max(0, Math.min(100, (p.hp / balance.playerHp) * 100));
@@ -145,6 +147,7 @@ function HpPanel({
       <div className="hp-name">
         {isReading && <span className="mic-dot" />}
         {p.name}
+        {mySide === side && <span className="tag you">你</span>}
         {state.firstAttacker === side && <span className="tag">先</span>}
       </div>
       <div className="hpbar">
@@ -272,10 +275,44 @@ function QuestionText({ text, masked }: { text: string; masked: number[] }) {
   );
 }
 
-function Battle({ settings, onExit }: { settings: LocalGameSettings; onExit: () => void }) {
-  const game = useLocalGame(settings);
-  const { state } = game;
-  const meta = difficultyLabel(settings.difficulty);
+export interface BattleStageProps {
+  state: GameState;
+  remainingSec: number;
+  totalSec: number;
+  /** 自己的即時辨識字幕 */
+  interim: string;
+  /** 對手的即時辨識字幕（連線模式才有） */
+  peerInterim?: string;
+  maskedIndices: number[];
+  error?: string | null;
+  difficultyText: string;
+  /** 連線模式：我在哪一側（只能操作自己的道具）。單機為 null，兩側皆可操作 */
+  mySide?: 0 | 1 | null;
+  exitLabel: string;
+  /** 房號、語音狀態等連線模式專屬的提示 */
+  banner?: React.ReactNode;
+  onSelectItem: (side: 0 | 1, item: ItemId) => void;
+  onRematch: () => void;
+  onExit: () => void;
+}
+
+/** 對戰畫面本體。單機與連線共用，差別只在資料從哪來。 */
+export function BattleStage({
+  state,
+  remainingSec,
+  totalSec,
+  interim,
+  peerInterim = '',
+  maskedIndices,
+  error,
+  difficultyText,
+  mySide = null,
+  exitLabel,
+  banner,
+  onSelectItem,
+  onRematch,
+  onExit,
+}: BattleStageProps) {
   const isItemPhase = state.phase === 'roundIntro';
 
   // 有人被扣血時，在他的血條上跳出漂浮數字
@@ -309,34 +346,51 @@ function Battle({ settings, onExit }: { settings: LocalGameSettings; onExit: () 
   }, [state.roundResolves, state.round, state]);
 
   if (state.phase === 'matchResult') {
-    return <MatchResult state={state} onRematch={game.rematch} onExit={onExit} />;
+    return <MatchResult state={state} onRematch={onRematch} onExit={onExit} />;
   }
+
+  // 朗讀中要顯示誰的字幕：自己唸就顯示自己的，對方唸就顯示對方傳來的
+  const readerIsMe = mySide === null || state.currentReader === mySide;
+  const shownInterim = readerIsMe ? interim : peerInterim;
 
   return (
     <>
       <button className="back" onClick={onExit}>
-        ← 重新設定
+        ← {exitLabel}
       </button>
+
+      {banner}
 
       {/* 上方：左右血條 */}
       <div className="pk-header">
-        <HpPanel state={state} side={0} floats={floats} />
+        <HpPanel state={state} side={0} floats={floats} mySide={mySide} />
         <div className="vs-badge">
           <div className="vs">VS</div>
           <div className="round-no">R{state.round}</div>
         </div>
-        <HpPanel state={state} side={1} floats={floats} />
+        <HpPanel state={state} side={1} floats={floats} mySide={mySide} />
       </div>
 
-      {game.error && <div className="error">{game.error}</div>}
+      {error && <div className="error">{error}</div>}
 
       {/* 中間：舞台 */}
       <div className="card stage">
+        {state.phase === 'trashTalk' && (
+          <>
+            <div style={{ fontSize: '2.5rem' }}>🔥</div>
+            <h2 style={{ margin: '8px 0' }}>嗆聲時間</h2>
+            <p style={{ color: 'var(--text-dim)' }}>互相放話，暖身一下！（對方聽得到你）</p>
+            <div className={`countdown ${remainingSec <= 3 ? 'low' : ''}`}>
+              {Math.ceil(remainingSec)}
+            </div>
+          </>
+        )}
+
         {state.phase === 'coinFlip' && (
           <>
             <div className="coin">🪙</div>
             <h2 style={{ margin: '8px 0' }}>決定先後攻…</h2>
-            <p style={{ color: 'var(--text-dim)' }}>難度：{meta.label}</p>
+            <p style={{ color: 'var(--text-dim)' }}>難度：{difficultyText}</p>
           </>
         )}
 
@@ -346,10 +400,14 @@ function Battle({ settings, onExit }: { settings: LocalGameSettings; onExit: () 
               第 {state.round} 回合 · ⚔️ <b>{state.players[state.firstAttacker].name}</b> 先攻
             </div>
             <QuestionText text={state.question.text} masked={[]} />
-            <div className={`countdown ${game.remainingSec <= 3 ? 'low' : ''}`}>
-              {Math.ceil(game.remainingSec)}
+            <div className={`countdown ${remainingSec <= 3 ? 'low' : ''}`}>
+              {Math.ceil(remainingSec)}
             </div>
-            <div className="stage-hint">看題選道具──兩人各自點自己那側（不選也可以）</div>
+            <div className="stage-hint">
+              {mySide === null
+                ? '看題選道具──兩人各自點自己那側（不選也可以）'
+                : '看題選道具──點你自己那側（不選也可以）'}
+            </div>
           </>
         )}
 
@@ -359,29 +417,31 @@ function Battle({ settings, onExit }: { settings: LocalGameSettings; onExit: () 
               👉 換 <b>{state.players[state.currentReader].name}</b> 唸
               {state.roundResolves[other(state.currentReader)] && '（同一題）'}
             </div>
-            <QuestionText text={state.question.text} masked={game.maskedIndices} />
-            <div className="prepare-count">{Math.ceil(game.remainingSec)}</div>
+            <QuestionText text={state.question.text} masked={maskedIndices} />
+            <div className="prepare-count">{Math.ceil(remainingSec)}</div>
             <div className="stage-hint">看題中…</div>
           </>
         )}
 
         {state.phase === 'reading' && state.question && state.currentReader !== null && (
           <>
-            <div className={`countdown ${game.remainingSec <= 3 ? 'low' : ''}`}>
-              {game.remainingSec.toFixed(1)}s
+            <div className={`countdown ${remainingSec <= 3 ? 'low' : ''}`}>
+              {remainingSec.toFixed(1)}s
             </div>
             <div className="timer-ring">
-              <span
-                style={{ width: `${Math.max(0, (game.remainingSec / game.totalSec) * 100)}%` }}
-              />
+              <span style={{ width: `${Math.max(0, (remainingSec / totalSec) * 100)}%` }} />
             </div>
-            <QuestionText text={state.question.text} masked={game.maskedIndices} />
-            <div className={`interim ${game.interim ? 'has-text' : ''}`}>
+            <QuestionText text={state.question.text} masked={maskedIndices} />
+            <div className={`interim ${shownInterim ? 'has-text' : ''}`}>
               <span className="mic-dot" />
-              {game.interim || '（開始唸…）'}
+              {shownInterim || (readerIsMe ? '（開始唸…）' : '（對方朗讀中…）')}
             </div>
             <div className="stage-hint">
-              {state.players[state.currentReader].name} 朗讀中──另一位請保持安靜
+              {readerIsMe
+                ? `${state.players[state.currentReader].name} 朗讀中──${
+                    mySide === null ? '另一位請保持安靜' : '你的麥克風已開啟'
+                  }`
+                : `${state.players[state.currentReader].name} 朗讀中──你已被系統靜音`}
             </div>
           </>
         )}
@@ -389,7 +449,7 @@ function Battle({ settings, onExit }: { settings: LocalGameSettings; onExit: () 
         {state.phase === 'roundResult' && (
           <>
             <div className="stage-head">第 {state.round} 回合結束</div>
-            <div className="stage-hint">{Math.ceil(game.remainingSec)} 秒後續戰</div>
+            <div className="stage-hint">{Math.ceil(remainingSec)} 秒後續戰</div>
             <MarksLegend />
           </>
         )}
@@ -397,16 +457,38 @@ function Battle({ settings, onExit }: { settings: LocalGameSettings; onExit: () 
 
       {/* 下方：左右各自的道具與成績 */}
       <div className="pk-sides">
-        <div className="pk-side">
-          <ItemBar state={state} side={0} selectable={isItemPhase} onSelect={game.selectItem} />
-          <SideResult resolve={state.roundResolves[0]} />
-        </div>
-        <div className="pk-side">
-          <ItemBar state={state} side={1} selectable={isItemPhase} onSelect={game.selectItem} />
-          <SideResult resolve={state.roundResolves[1]} />
-        </div>
+        {([0, 1] as const).map((side) => (
+          <div className="pk-side" key={side}>
+            <ItemBar
+              state={state}
+              side={side}
+              selectable={isItemPhase && (mySide === null || mySide === side)}
+              onSelect={onSelectItem}
+            />
+            <SideResult resolve={state.roundResolves[side]} />
+          </div>
+        ))}
       </div>
     </>
+  );
+}
+
+function Battle({ settings, onExit }: { settings: LocalGameSettings; onExit: () => void }) {
+  const game = useLocalGame(settings);
+  return (
+    <BattleStage
+      state={game.state}
+      remainingSec={game.remainingSec}
+      totalSec={game.totalSec}
+      interim={game.interim}
+      maskedIndices={game.maskedIndices}
+      error={game.error}
+      difficultyText={difficultyLabel(settings.difficulty).label}
+      exitLabel="重新設定"
+      onSelectItem={game.selectItem}
+      onRematch={game.rematch}
+      onExit={onExit}
+    />
   );
 }
 

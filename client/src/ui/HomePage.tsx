@@ -5,10 +5,12 @@ export function HomePage({
   onStartPractice,
   onStartBattle,
   onOpenHelp,
+  onStartOnline,
 }: {
   onStartPractice: () => void;
   onStartBattle: () => void;
   onOpenHelp: () => void;
+  onStartOnline: () => void;
 }) {
   const [micState, setMicState] = useState<'idle' | 'ok' | 'denied'>('idle');
   const supported = isWebSpeechSupported();
@@ -63,13 +65,16 @@ export function HomePage({
             兩人共用這台裝置：嗆聲 → 擲先攻 → 輪流唸同一題互打，血量歸零者落敗。
           </p>
           <button
-            className="btn big secondary"
-            disabled
-            title="Phase 2：需要伺服器"
+            className="btn big"
+            disabled={!supported}
+            onClick={onStartOnline}
             style={{ marginTop: 10 }}
           >
-            🌐 連線對戰 — 開發中（需伺服器）
+            🌐 連線對戰（各自裝置）
           </button>
+          <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', marginTop: 12 }}>
+            用房號和朋友配對：先嗆聲 10 秒，唸的時候對方聽得到你的聲音。建議戴耳機。
+          </p>
         </div>
       </div>
 
