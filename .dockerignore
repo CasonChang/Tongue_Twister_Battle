@@ -1,8 +1,16 @@
+# 注意：這裡不能排除整個 client/，因為 npm ci 在 workspaces 模式下需要
+# 看到所有 workspace 的 package.json 才能跟 lockfile 對得起來
+# （Dockerfile 有一行 COPY client/package.json）。
+# 只排除 client 底下真正用不到的東西即可——Dockerfile 沒有整包 COPY client/，
+# 所以其餘檔案本來就不會進到映像檔裡。
 node_modules
 **/node_modules
 **/dist
 **/*.tsbuildinfo
 .git
-client
+.github
+client/src
+client/index.html
+client/public
 docs
 *.md
