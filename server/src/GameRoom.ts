@@ -23,6 +23,9 @@ export interface RoomHooks {
   onNotice: (notice: GameNotice) => void;
 }
 
+/** 朗讀時限到後，多等這麼久讓瀏覽器把最終辨識結果送達（Web Speech stop 後才有最終文字） */
+const REPORT_GRACE_SEC = 4;
+
 /** 各階段的持續秒數；reading 依題目而定 */
 function phaseDuration(state: GameState, readSec: number): number | null {
   switch (state.phase) {
@@ -106,8 +109,21 @@ export class GameRoom {
     this.hooks.onState(s, this.deadlineAt, this.readSec);
 
     if (dur !== null) {
-      this.timer = setTimeout(() => this.advance(), dur * 1000);
+      const phase = s.phase;
+      // 朗讀階段的計時器只是「保險絲」：正常情況下朗讀者的瀏覽器會在時限
+      // 到的當下停止辨識、送出 speech:report，伺服器收到就立刻結算（見
+      // reportSpeech）。因為辨識結果從瀏覽器 stop() 到拿到最終文字有幾百
+      // 毫秒的延遲，這裡多給 REPORT_GRACE_SEC 秒等它送達；真的沒送到才用
+      // 空結果收場。若沒有這段寬限，就會發生「明明唸了卻判 0 分」。
+      const graceMs = phase === 'reading' ? REPORT_GRACE_SEC * 1000 : 0;
+      this.timer = setTimeout(() => this.advanceFrom(phase), dur * 1000 + graceMs);
     }
+  }
+
+  /** 只有仍停在指定階段時才推進，避免「回報」與「保險絲計時器」重複觸發 */
+  private advanceFrom(phase: GameState['phase']): void {
+    if (this.state.phase !== phase) return;
+    this.advance();
   }
 
   /** 階段時間到，推進到下一階段 */
@@ -176,10 +192,14 @@ export class GameRoom {
     if (score.isPerfect) this.hooks.onNotice({ type: 'perfect', player: reader });
   }
 
-  /** 朗讀者上報辨識結果。時間到才結算，避免搶答造成不公平 */
+  /**
+   * 朗讀者在時限到時上報辨識結果 → 立刻結算並進入下一階段。
+   * （不再等保險絲計時器，體感更即時；保險絲只在回報遲遲不來時兜底）
+   */
   reportSpeech(player: 0 | 1, report: SpeechReport): void {
     if (this.state.phase !== 'reading' || this.state.currentReader !== player) return;
     this.pendingReport = report;
+    this.advanceFrom('reading');
   }
 
   /** 開場階段選道具 */
@@ -213,8 +233,10 @@ export class GameRoom {
   /** 重連後從剩餘時間繼續 */
   resume(): void {
     if (this.timer || this.deadlineAt === null) return;
-    const left = Math.max(0, this.deadlineAt - Date.now());
-    this.timer = setTimeout(() => this.advance(), left);
+    const phase = this.state.phase;
+    const graceMs = phase === 'reading' ? REPORT_GRACE_SEC * 1000 : 0;
+    const left = Math.max(0, this.deadlineAt - Date.now()) + graceMs;
+    this.timer = setTimeout(() => this.advanceFrom(phase), left);
     this.hooks.onState(this.state, this.deadlineAt, this.readSec);
   }
 

@@ -1,47 +1,573 @@
 [
-  { "id": "zh-e01", "lang": "zh-TW", "type": "normal", "difficulty": 1, "timeLimitSec": 6, "text": "吃葡萄不吐葡萄皮", "tags": ["經典"] },
-  { "id": "zh-e02", "lang": "zh-TW", "type": "normal", "difficulty": 1, "timeLimitSec": 6, "text": "紅鳳凰粉鳳凰", "tags": ["經典"] },
-  { "id": "zh-e03", "lang": "zh-TW", "type": "normal", "difficulty": 1, "timeLimitSec": 5, "text": "牛郎戀劉娘", "tags": ["短"] },
-  { "id": "zh-e04", "lang": "zh-TW", "type": "normal", "difficulty": 1, "timeLimitSec": 5, "text": "白石白又滑", "tags": ["短"] },
-  { "id": "zh-e05", "lang": "zh-TW", "type": "normal", "difficulty": 1, "timeLimitSec": 6, "text": "大兔子大肚子", "tags": ["短"] },
-  { "id": "zh-e06", "lang": "zh-TW", "type": "normal", "difficulty": 1, "timeLimitSec": 6, "text": "哥哥挎瓜筐", "tags": ["短"] },
-  { "id": "zh-e07", "lang": "zh-TW", "type": "normal", "difficulty": 1, "timeLimitSec": 6, "text": "板凳寬扁擔長", "tags": ["經典"] },
-  { "id": "zh-e08", "lang": "zh-TW", "type": "normal", "difficulty": 1, "timeLimitSec": 6, "text": "藍教練是女教練", "tags": ["繞舌"] },
-  { "id": "zh-e09", "lang": "zh-TW", "type": "normal", "difficulty": 1, "timeLimitSec": 6, "text": "六十六隻石獅子", "tags": ["數字"] },
-  { "id": "zh-e10", "lang": "zh-TW", "type": "normal", "difficulty": 1, "timeLimitSec": 6, "text": "粉紅牆上畫鳳凰", "tags": ["經典"] },
-  { "id": "zh-e11", "lang": "zh-TW", "type": "normal", "difficulty": 1, "timeLimitSec": 6, "text": "青草枯青草綠", "tags": ["短"] },
-  { "id": "zh-e12", "lang": "zh-TW", "type": "normal", "difficulty": 1, "timeLimitSec": 6, "text": "十顆石榴石", "tags": ["短"] },
-
-  { "id": "zh-n01", "lang": "zh-TW", "type": "normal", "difficulty": 2, "timeLimitSec": 9, "text": "四是四十是十，十四是十四四十是四十", "tags": ["數字", "經典"] },
-  { "id": "zh-n02", "lang": "zh-TW", "type": "normal", "difficulty": 2, "timeLimitSec": 9, "text": "門口一個盆門外一個瓶，盆碰瓶盆破瓶也破", "tags": ["經典"] },
-  { "id": "zh-n03", "lang": "zh-TW", "type": "normal", "difficulty": 2, "timeLimitSec": 10, "text": "扁擔長板凳寬，扁擔想綁在板凳上", "tags": ["經典"] },
-  { "id": "zh-n04", "lang": "zh-TW", "type": "normal", "difficulty": 2, "timeLimitSec": 9, "text": "山上有隻虎林中有隻鹿，虎和鹿在山林裡相遇", "tags": ["動物"] },
-  { "id": "zh-n05", "lang": "zh-TW", "type": "normal", "difficulty": 2, "timeLimitSec": 9, "text": "牆上一根釘，釘上掛根繩，繩上拴個瓶", "tags": ["經典"] },
-  { "id": "zh-n06", "lang": "zh-TW", "type": "normal", "difficulty": 2, "timeLimitSec": 9, "text": "老龍惱怒鬧老農，老農惱怒鬧老龍", "tags": ["繞舌"] },
-  { "id": "zh-n07", "lang": "zh-TW", "type": "normal", "difficulty": 2, "timeLimitSec": 10, "text": "一平盆麵烙一平盆餅，一平盆餅盛一平盆麵", "tags": ["繞舌"] },
-  { "id": "zh-n08", "lang": "zh-TW", "type": "normal", "difficulty": 2, "timeLimitSec": 9, "text": "青龍洞裡龍撞鐘，鐘撞龍來龍撞鐘", "tags": ["繞舌"] },
-  { "id": "zh-n09", "lang": "zh-TW", "type": "normal", "difficulty": 2, "timeLimitSec": 9, "text": "白貓黑貓花貓，三隻貓搶一根草", "tags": ["動物"] },
-  { "id": "zh-n10", "lang": "zh-TW", "type": "normal", "difficulty": 2, "timeLimitSec": 10, "text": "劉奶奶找牛奶奶買牛奶，牛奶奶給劉奶奶拿牛奶", "tags": ["經典"] },
-  { "id": "zh-n11", "lang": "zh-TW", "type": "normal", "difficulty": 2, "timeLimitSec": 9, "text": "石小四和史小世，一起去買絲和柿", "tags": ["同音"] },
-  { "id": "zh-n12", "lang": "zh-TW", "type": "normal", "difficulty": 2, "timeLimitSec": 10, "text": "三月三小三去登山，山上山下三個山洞", "tags": ["數字"] },
-
-  { "id": "zh-h01", "lang": "zh-TW", "type": "normal", "difficulty": 3, "timeLimitSec": 11, "text": "四十四隻石獅子是死是四十四隻石獅子", "tags": ["數字", "經典"] },
-  { "id": "zh-h02", "lang": "zh-TW", "type": "normal", "difficulty": 3, "timeLimitSec": 11, "text": "黑化肥發灰會揮發，灰化肥揮發會發黑", "tags": ["進階"] },
-  { "id": "zh-h03", "lang": "zh-TW", "type": "normal", "difficulty": 3, "timeLimitSec": 12, "text": "打南邊來了個喇嘛，手裡提著五斤鰨目", "tags": ["經典"] },
-  { "id": "zh-h04", "lang": "zh-TW", "type": "normal", "difficulty": 3, "timeLimitSec": 12, "text": "石獅寺前有四十四個石獅子，寺前樹上結了四十四個澀柿子", "tags": ["數字"] },
-  { "id": "zh-h05", "lang": "zh-TW", "type": "normal", "difficulty": 3, "timeLimitSec": 11, "text": "初春時節出差去，處處春色處處綠", "tags": ["翹舌"] },
-  { "id": "zh-h06", "lang": "zh-TW", "type": "normal", "difficulty": 3, "timeLimitSec": 12, "text": "師父四十四，徒弟十四四，師徒一起數四十四隻死獅子", "tags": ["數字"] },
-  { "id": "zh-h07", "lang": "zh-TW", "type": "normal", "difficulty": 3, "timeLimitSec": 11, "text": "紫瓷盤裝著紫葡萄，紫葡萄配著紫瓷盤", "tags": ["翹舌"] },
-  { "id": "zh-h08", "lang": "zh-TW", "type": "normal", "difficulty": 3, "timeLimitSec": 12, "text": "牛丟油簍油瓶漏，牛拎油簍油瓶油", "tags": ["繞舌"] },
-  { "id": "zh-h09", "lang": "zh-TW", "type": "normal", "difficulty": 3, "timeLimitSec": 11, "text": "認真人辛勤耕耘，勤懇人認真經營", "tags": ["前後鼻音"] },
-  { "id": "zh-h10", "lang": "zh-TW", "type": "normal", "difficulty": 3, "timeLimitSec": 12, "text": "隔壁鄰居嫁女兒，女兒嫁到隔壁鄰居家", "tags": ["繞舌"] },
-
-  { "id": "zh-x01", "lang": "zh-TW", "type": "normal", "difficulty": 4, "timeLimitSec": 14, "text": "八百標兵奔北坡，砲兵並排北邊跑，砲兵怕把標兵碰，標兵怕碰砲兵砲", "tags": ["地獄", "經典"] },
-  { "id": "zh-x02", "lang": "zh-TW", "type": "normal", "difficulty": 4, "timeLimitSec": 13, "text": "紅鯉魚與綠鯉魚與驢，紅鯉魚綠鯉魚驢一起去旅遊", "tags": ["地獄"] },
-  { "id": "zh-x03", "lang": "zh-TW", "type": "normal", "difficulty": 4, "timeLimitSec": 14, "text": "牛牛和妞妞是好朋友，牛牛放牛妞妞拎油，牛牛不讓妞妞的油瓶碰牛頭", "tags": ["地獄"] },
-  { "id": "zh-x04", "lang": "zh-TW", "type": "normal", "difficulty": 4, "timeLimitSec": 14, "text": "山前有四十四棵澀柿子樹，山後有四十四隻石獅子，四十四隻石獅子啃了四十四棵澀柿子樹", "tags": ["地獄", "數字"] },
-  { "id": "zh-x05", "lang": "zh-TW", "type": "normal", "difficulty": 4, "timeLimitSec": 13, "text": "粉紅牆上畫鳳凰，紅鳳凰粉鳳凰，粉紅鳳凰花鳳凰", "tags": ["地獄", "經典"] },
-  { "id": "zh-x06", "lang": "zh-TW", "type": "normal", "difficulty": 4, "timeLimitSec": 14, "text": "門口有四十四棵柳樹，樹上有四十四隻綠鸚鵡，四十四隻綠鸚鵡數四十四棵柳樹", "tags": ["地獄", "數字"] },
-  { "id": "zh-x07", "lang": "zh-TW", "type": "normal", "difficulty": 4, "timeLimitSec": 13, "text": "會揮發的黑化肥會發灰，會發灰的灰化肥會揮發黑", "tags": ["地獄"] },
-  { "id": "zh-x08", "lang": "zh-TW", "type": "normal", "difficulty": 4, "timeLimitSec": 14, "text": "初級試車員穿著四十四號運動鞋，試著四十四輛新汽車", "tags": ["地獄", "翹舌"] }
+  {
+    "id": "zh-e01",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 1,
+    "timeLimitSec": 6,
+    "text": "吃葡萄不吐葡萄皮，不吃葡萄倒吐葡萄皮",
+    "tags": [
+      "經典",
+      "唇音"
+    ]
+  },
+  {
+    "id": "zh-e02",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 1,
+    "timeLimitSec": 6,
+    "text": "紅鳳凰粉鳳凰，粉紅牆上畫鳳凰",
+    "tags": [
+      "經典",
+      "唇齒音"
+    ]
+  },
+  {
+    "id": "zh-e03",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 1,
+    "timeLimitSec": 6,
+    "text": "牛郎戀劉娘，劉娘念牛郎",
+    "tags": [
+      "短",
+      "鼻音"
+    ]
+  },
+  {
+    "id": "zh-e05",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 1,
+    "timeLimitSec": 6,
+    "text": "大兔子大肚子，大肚子抱兔子",
+    "tags": [
+      "趣味",
+      "短"
+    ]
+  },
+  {
+    "id": "zh-e08",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 1,
+    "timeLimitSec": 6,
+    "text": "藍教練是女教練，呂教練是男教練",
+    "tags": [
+      "鼻音",
+      "趣味"
+    ]
+  },
+  {
+    "id": "zh-e09",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 1,
+    "timeLimitSec": 6,
+    "text": "六十六隻石獅子，吃澀柿子",
+    "tags": [
+      "數字",
+      "平翹舌"
+    ]
+  },
+  {
+    "id": "zh-e10",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 1,
+    "timeLimitSec": 6,
+    "text": "媽媽騎馬，馬慢，媽媽罵馬",
+    "tags": [
+      "經典",
+      "短"
+    ]
+  },
+  {
+    "id": "zh-e11",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 1,
+    "timeLimitSec": 6,
+    "text": "這是蠶那是蟬，蠶藏蟬唱",
+    "tags": [
+      "平翹舌",
+      "動物"
+    ]
+  },
+  {
+    "id": "zh-e14",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 1,
+    "timeLimitSec": 6,
+    "text": "黃花花兒黃，紅花花兒紅",
+    "tags": [
+      "短",
+      "趣味"
+    ]
+  },
+  {
+    "id": "zh-e15",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 1,
+    "timeLimitSec": 6,
+    "text": "盆裡放個瓶，瓶旁擺個盆",
+    "tags": [
+      "唇音",
+      "短"
+    ]
+  },
+  {
+    "id": "zh-e16",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 1,
+    "timeLimitSec": 6,
+    "text": "單槓盪單槓，鋼彈盪鋼彈",
+    "tags": [
+      "網路",
+      "前後鼻音"
+    ]
+  },
+  {
+    "id": "zh-e17",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 1,
+    "timeLimitSec": 6,
+    "text": "南港展覽館的官方網站",
+    "tags": [
+      "網路",
+      "前後鼻音"
+    ]
+  },
+  {
+    "id": "zh-e18",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 1,
+    "timeLimitSec": 6,
+    "text": "黑化肥發灰，灰化肥發黑",
+    "tags": [
+      "經典",
+      "唇齒音"
+    ]
+  },
+  {
+    "id": "zh-n02",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 2,
+    "timeLimitSec": 9,
+    "text": "門口一個盆門外一個瓶，盆碰瓶，盆破瓶也破",
+    "tags": [
+      "經典",
+      "唇音"
+    ]
+  },
+  {
+    "id": "zh-n03",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 2,
+    "timeLimitSec": 9,
+    "text": "扁擔長板凳寬，扁擔偏要綁在板凳上",
+    "tags": [
+      "經典",
+      "唇音"
+    ]
+  },
+  {
+    "id": "zh-n05",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 2,
+    "timeLimitSec": 9,
+    "text": "老龍惱怒鬧老農，老農惱怒鬧老龍",
+    "tags": [
+      "經典",
+      "鼻音"
+    ]
+  },
+  {
+    "id": "zh-n08",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 2,
+    "timeLimitSec": 9,
+    "text": "劉奶奶買牛奶，牛奶奶拿牛奶給劉奶奶",
+    "tags": [
+      "經典",
+      "鼻音"
+    ]
+  },
+  {
+    "id": "zh-n09",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 2,
+    "timeLimitSec": 9,
+    "text": "石小四和史小世，一起去買絲和柿",
+    "tags": [
+      "同音",
+      "平翹舌"
+    ]
+  },
+  {
+    "id": "zh-n10",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 2,
+    "timeLimitSec": 9,
+    "text": "和尚端湯上塔，塔滑湯灑湯燙塔",
+    "tags": [
+      "經典",
+      "平翹舌"
+    ]
+  },
+  {
+    "id": "zh-n13",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 2,
+    "timeLimitSec": 9,
+    "text": "爸爸抱寶寶，跑到布鋪買布補長袍",
+    "tags": [
+      "唇音",
+      "趣味"
+    ]
+  },
+  {
+    "id": "zh-n14",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 2,
+    "timeLimitSec": 9,
+    "text": "小豬扛鋤頭，鋤頭撞石頭，石頭砸豬頭",
+    "tags": [
+      "動物",
+      "平翹舌"
+    ]
+  },
+  {
+    "id": "zh-n16",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 2,
+    "timeLimitSec": 9,
+    "text": "抱著灰雞上飛機，飛機起飛灰雞要飛",
+    "tags": [
+      "網路",
+      "唇齒音"
+    ]
+  },
+  {
+    "id": "zh-n17",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 2,
+    "timeLimitSec": 9,
+    "text": "銅勺舀熱油，鐵勺舀涼油，熱涼都是油",
+    "tags": [
+      "經典",
+      "舌尖音"
+    ]
+  },
+  {
+    "id": "zh-n19",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 2,
+    "timeLimitSec": 9,
+    "text": "南港展覽館館長，晚上趕場到展館",
+    "tags": [
+      "網路",
+      "前後鼻音"
+    ]
+  },
+  {
+    "id": "zh-h01",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 3,
+    "timeLimitSec": 12,
+    "text": "四十四隻石獅子，不知是石獅子，還是四十四隻死獅子",
+    "tags": [
+      "數字",
+      "經典",
+      "平翹舌"
+    ]
+  },
+  {
+    "id": "zh-h02",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 3,
+    "timeLimitSec": 12,
+    "text": "黑化肥發灰會揮發，灰化肥揮發後會發黑",
+    "tags": [
+      "經典",
+      "唇齒音"
+    ]
+  },
+  {
+    "id": "zh-h04",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 3,
+    "timeLimitSec": 12,
+    "text": "石獅寺前四十四隻石獅子，樹上有四十四顆澀柿子",
+    "tags": [
+      "數字",
+      "平翹舌"
+    ]
+  },
+  {
+    "id": "zh-h05",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 3,
+    "timeLimitSec": 12,
+    "text": "初一吃素初二吃素，初三初四初五也吃素",
+    "tags": [
+      "數字",
+      "平翹舌"
+    ]
+  },
+  {
+    "id": "zh-h07",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 3,
+    "timeLimitSec": 12,
+    "text": "紫瓷盤裡裝著紫葡萄，紫葡萄配著紫瓷盤",
+    "tags": [
+      "平翹舌",
+      "趣味"
+    ]
+  },
+  {
+    "id": "zh-h09",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 3,
+    "timeLimitSec": 12,
+    "text": "量窗量床又量牆，床比窗長，牆又比床長",
+    "tags": [
+      "前後鼻音",
+      "經典"
+    ]
+  },
+  {
+    "id": "zh-h10",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 3,
+    "timeLimitSec": 12,
+    "text": "小鳳提圓燈籠，小龍提方燈籠，圓燈畫龍方燈畫鳳",
+    "tags": [
+      "鼻音",
+      "趣味"
+    ]
+  },
+  {
+    "id": "zh-h15",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 3,
+    "timeLimitSec": 12,
+    "text": "鋼彈盪單槓，盪斷了單槓，單槓不給鋼彈盪",
+    "tags": [
+      "網路",
+      "前後鼻音"
+    ]
+  },
+  {
+    "id": "zh-h16",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 3,
+    "timeLimitSec": 12,
+    "text": "抱著灰雞上飛機，飛機起飛灰雞要飛，飛機追灰雞",
+    "tags": [
+      "網路",
+      "唇齒音"
+    ]
+  },
+  {
+    "id": "zh-h17",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 3,
+    "timeLimitSec": 12,
+    "text": "銅勺舀熱油、鐵勺舀涼油，銅鐵兩勺別舀錯油",
+    "tags": [
+      "經典",
+      "舌尖音"
+    ]
+  },
+  {
+    "id": "zh-h20",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 3,
+    "timeLimitSec": 12,
+    "text": "粉鳳凰紅鳳凰花鳳凰，粉紅牆上畫滿紅粉鳳凰",
+    "tags": [
+      "經典",
+      "唇齒音"
+    ]
+  },
+  {
+    "id": "zh-x02",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 4,
+    "timeLimitSec": 15,
+    "text": "紅鯉魚家有頭小綠驢叫李屢屢，綠鯉魚家有頭小紅驢叫呂里里",
+    "tags": [
+      "地獄",
+      "鼻音"
+    ]
+  },
+  {
+    "id": "zh-x05",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 4,
+    "timeLimitSec": 15,
+    "text": "粉紅牆上畫鳳凰，紅鳳凰粉鳳凰，紅粉鳳凰花鳳凰",
+    "tags": [
+      "地獄",
+      "經典",
+      "唇齒音"
+    ]
+  },
+  {
+    "id": "zh-x07",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 4,
+    "timeLimitSec": 15,
+    "text": "黑化肥發灰會揮發，灰化肥揮發會發黑，黑灰化肥全揮發",
+    "tags": [
+      "地獄",
+      "唇齒音"
+    ]
+  },
+  {
+    "id": "zh-x08",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 4,
+    "timeLimitSec": 15,
+    "text": "初級試車員穿四十四號濕球鞋，試駛四十四輛新汽車",
+    "tags": [
+      "地獄",
+      "平翹舌"
+    ]
+  },
+  {
+    "id": "zh-x09",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 4,
+    "timeLimitSec": 15,
+    "text": "扁擔長板凳寬，扁擔偏要綁板凳，板凳偏不讓扁擔綁",
+    "tags": [
+      "地獄",
+      "經典"
+    ]
+  },
+  {
+    "id": "zh-x11",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 4,
+    "timeLimitSec": 15,
+    "text": "小鳳拿圓龍燈換小龍的方鳳燈，小龍不肯拿方鳳燈換圓龍燈",
+    "tags": [
+      "地獄",
+      "鼻音"
+    ]
+  },
+  {
+    "id": "zh-x13",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 4,
+    "timeLimitSec": 15,
+    "text": "天上七顆星地下七塊冰，樹上七隻鷹，梁上還有七根釘",
+    "tags": [
+      "地獄",
+      "數字",
+      "前後鼻音"
+    ]
+  },
+  {
+    "id": "zh-x14",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 4,
+    "timeLimitSec": 15,
+    "text": "男演員穿藍棉制服，女演員穿棉藍制服",
+    "tags": [
+      "地獄",
+      "鼻音"
+    ]
+  },
+  {
+    "id": "zh-x16",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 4,
+    "timeLimitSec": 15,
+    "text": "南港展覽館館長晚上趕場，幫南山廣場場方搬鋼彈和單槓",
+    "tags": [
+      "網路",
+      "地獄",
+      "地名"
+    ]
+  },
+  {
+    "id": "zh-x17",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 4,
+    "timeLimitSec": 15,
+    "text": "永和有中和路中和有永和路，永和中和兩條路互相接錯路",
+    "tags": [
+      "台灣",
+      "地獄",
+      "地名"
+    ]
+  },
+  {
+    "id": "zh-x19",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 4,
+    "timeLimitSec": 15,
+    "text": "銅勺舀熱油鐵勺舀涼油，銅勺鐵勺輪流舀熱油和涼油",
+    "tags": [
+      "經典",
+      "地獄",
+      "舌尖音"
+    ]
+  },
+  {
+    "id": "zh-x20",
+    "lang": "zh-TW",
+    "type": "normal",
+    "difficulty": 4,
+    "timeLimitSec": 15,
+    "text": "和尚端湯上塔，塔滑湯灑湯燙塔，和尚端塔上湯，湯滑塔灑塔燙湯。",
+    "tags": [
+      "經典",
+      "地獄",
+      "平翹舌"
+    ]
+  }
 ]

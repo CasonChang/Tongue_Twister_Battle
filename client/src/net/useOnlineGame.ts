@@ -73,6 +73,10 @@ export function useOnlineGame() {
   const lastSpeechAtRef = useRef(0);
   const gameRef = useRef<GameState | null>(null);
   const readSecRef = useRef(0);
+  /** 朗讀截止時主動回報的計時器 */
+  const reportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** 本次朗讀是否已回報，避免重複送 */
+  const reportedRef = useRef(false);
 
   /** 伺服器時間換算成本機時間後的剩餘秒數 */
   const remainingFromDeadline = useCallback(() => {
@@ -96,21 +100,47 @@ export function useOnlineGame() {
     return () => clearInterval(t);
   }, [remainingFromDeadline]);
 
-  const stopRecognition = useCallback((report: boolean) => {
-    const rec = recognizerRef.current;
+  /** 只停止辨識與干擾音，不回報（清理用） */
+  const cleanupRecognition = useCallback(() => {
+    if (reportTimerRef.current) {
+      clearTimeout(reportTimerRef.current);
+      reportTimerRef.current = null;
+    }
     stopNoiseRef.current?.();
     stopNoiseRef.current = null;
-    if (!rec) return;
+    const rec = recognizerRef.current;
     recognizerRef.current = null;
-    if (report) {
-      rec.onFinal((r) => {
-        const endedAt = lastSpeechAtRef.current || Date.now();
-        socketRef.current?.emit('speech:report', {
-          chunks: r.chunks.length ? r.chunks : [[r.transcript]],
-          elapsedSec: Math.max(0, (endedAt - startedAtRef.current) / 1000),
-        });
-      });
+    rec?.stop();
+  }, []);
+
+  /**
+   * 朗讀時限到 → 停止辨識、拿最終結果、送給伺服器計分。
+   * 關鍵：由「朗讀者的瀏覽器」在截止當下主動送，伺服器收到才結算——
+   * 否則伺服器一到時限就用空結果算 0 分（辨識最終文字晚幾百毫秒才到）。
+   */
+  const finishAndReport = useCallback(() => {
+    if (reportedRef.current) return;
+    reportedRef.current = true;
+    if (reportTimerRef.current) {
+      clearTimeout(reportTimerRef.current);
+      reportTimerRef.current = null;
     }
+    stopNoiseRef.current?.();
+    stopNoiseRef.current = null;
+    const rec = recognizerRef.current;
+    recognizerRef.current = null;
+    const send = (chunks: string[][]) => {
+      const endedAt = lastSpeechAtRef.current || Date.now();
+      socketRef.current?.emit('speech:report', {
+        chunks,
+        elapsedSec: Math.max(0, (endedAt - startedAtRef.current) / 1000),
+      });
+    };
+    if (!rec) {
+      send([['']]);
+      return;
+    }
+    rec.onFinal((r) => send(r.chunks.length ? r.chunks : [[r.transcript]]));
     rec.stop();
   }, []);
 
@@ -141,6 +171,7 @@ export function useOnlineGame() {
       const key = `${g.round}-${g.currentReader}-${g.phase}`;
       if (g.phase === 'reading' && iAmReader && readingKeyRef.current !== key) {
         readingKeyRef.current = key;
+        reportedRef.current = false;
         startedAtRef.current = Date.now();
         lastSpeechAtRef.current = 0;
         setState((s) => ({ ...s, interim: '' }));
@@ -163,12 +194,19 @@ export function useOnlineGame() {
         // 被下噪音干擾時，在自己這台播放
         const eff = effectsForReader(g, me);
         if (eff.noise) stopNoiseRef.current = playInterference(readSec + 1);
+
+        // 到截止時間就主動停止辨識並回報（伺服器收到才計分）
+        const ms = deadlineRef.current
+          ? Math.max(0, deadlineRef.current - offsetRef.current - Date.now())
+          : readSec * 1000;
+        if (reportTimerRef.current) clearTimeout(reportTimerRef.current);
+        reportTimerRef.current = setTimeout(() => finishAndReport(), ms);
       }
 
-      // 離開朗讀階段就收音並回報
-      if (g.phase !== 'reading' && recognizerRef.current) stopRecognition(true);
+      // 離開朗讀階段：清理（正常情況下截止時已回報過，這裡只是收尾）
+      if (g.phase !== 'reading' && recognizerRef.current) cleanupRecognition();
     },
-    [patch, stopRecognition],
+    [patch, cleanupRecognition, finishAndReport],
   );
 
   const handleState = useCallback(
@@ -341,7 +379,7 @@ export function useOnlineGame() {
   }, []);
 
   const leave = useCallback(() => {
-    stopRecognition(false);
+    cleanupRecognition();
     socketRef.current?.emit('room:leave');
     voiceRef.current?.dispose();
     voiceRef.current = null;
@@ -350,17 +388,17 @@ export function useOnlineGame() {
     gameRef.current = null;
     myIndexRef.current = null;
     setState(initial);
-  }, [stopRecognition]);
+  }, [cleanupRecognition]);
 
   const goLobby = useCallback(() => patch({ lobbyPhase: 'lobby', error: null }), [patch]);
 
   useEffect(() => {
     return () => {
-      stopRecognition(false);
+      cleanupRecognition();
       voiceRef.current?.dispose();
       socketRef.current?.disconnect();
     };
-  }, [stopRecognition]);
+  }, [cleanupRecognition]);
 
   return {
     state,
